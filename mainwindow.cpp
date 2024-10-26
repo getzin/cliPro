@@ -10,6 +10,7 @@
 #include <QSettings>
 #include <QSizeGrip>
 #include <QDir>
+#include <QKeyEvent>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -25,8 +26,6 @@ MainWindow::MainWindow(QWidget *parent)
     // QSizeGrip sizeGrip(this);
 
     //CREATE dynamic +/- button, BEFORE(!) loadButtonsFromJson
-    // (each content button will hold a reference to the dynBtn)
-    // getOrCreateDynBtn();
     this->dynBtn = new dynAddRmButton(dynAddRmButton::btnModeADD);
 
     //this will load all existing profiles into a list of the class
@@ -93,6 +92,37 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this->dynBtn, SIGNAL(dynBtnEnterKey()), this, SLOT(processDynBtnAction()));
     connect(this->dynBtn, SIGNAL(mainWindowButtonsNeedSwitch(dynAddRmButton::btnMode)), this, SLOT(adjustButtons(dynAddRmButton::btnMode)));
 
+    this->setUpUnmarkAllBtn();
+
+    // ui->buttonAdd->setFocus(Qt::OtherFocusReason);
+
+    //create the profile button, add it to the scrollGrid and connect
+    //ToDo get last profile name, and set it
+    // this->profileBtn = new profileButton(ui->centralwidget);
+    // this->profileBtn->setText("PROFILES");
+
+    // // connect(this->profileBtn, SIGNAL(clicked()), this, SLOT(profileButtonClicked()));
+
+    // this->ui->layoutAtTop->insertWidget(2, profileBtn);
+    // // connect(this->ui->buttonProfile, SIGNAL(clicked()), this, SLOT(profileButtonClicked()));
+
+    //loadAppSettings();
+
+    connect(this->ui->buttonAdd, SIGNAL(clicked()), this, SLOT(processActionForAddButton()));
+
+    connect(this->ui->textInputField, SIGNAL(textChanged(QString)), this, SLOT(processTextFieldChange(QString)));
+
+    this->ui->buttonAdd->setDisabled(true);
+    this->ui->buttonSearch->setDisabled(true);
+}
+
+// void MainWindow::setUpDynBtn(){
+// }
+
+void MainWindow::setUpUnmarkAllBtn(){
+
+    qDebug() << "zzzzzzzz SET UP UNMARK ALL BUTTON!!!!!!!!!";
+
     //not visible at first
     this->unmarkAllBtn = new QPushButton();
     this->unmarkAllBtn->setText("Cancel: Do not delete selected buttons");
@@ -112,19 +142,6 @@ MainWindow::MainWindow(QWidget *parent)
     //the stretch of "26" is a combination of the stretch of the other elements + a tiny bit more to make it look nice
     ui->layoutAtTop->setStretch(ui->layoutAtTop->indexOf(this->unmarkAllBtn), 26);
     connect(this->unmarkAllBtn, SIGNAL(clicked()), this, SLOT(unmarkAllCntButtons()));
-
-
-    //create the profile button, add it to the scrollGrid and connect
-    //ToDo get last profile name, and set it
-    // this->profileBtn = new profileButton(ui->centralwidget);
-    // this->profileBtn->setText("PROFILES");
-
-    // // connect(this->profileBtn, SIGNAL(clicked()), this, SLOT(profileButtonClicked()));
-
-    // this->ui->layoutAtTop->insertWidget(2, profileBtn);
-    // // connect(this->ui->buttonProfile, SIGNAL(clicked()), this, SLOT(profileButtonClicked()));
-
-    //loadAppSettings();
 }
 
 MainWindow::~MainWindow()
@@ -149,7 +166,27 @@ MainWindow::~MainWindow()
 // }
 
 void MainWindow::addDynBtnAtEndOfContentButtons(){
-    //ADD dynamic +/- button to the end of scrollGrid widget and connect
+
+    qDebug() << "xxxxxxxxxxxxx ADD DYN BUTTON!!!!!!!!!!";
+
+    //add dynamic +/- button to the end of scrollGrid widget
+
+    if(0){
+        if(this->dynBtn){
+            //ToDo.. takeAt from widget?
+            delete this->dynBtn;
+            this->dynBtn = new dynAddRmButton();
+            //ToDo proper init? (see ctor)
+        }
+    }
+
+    if(this->unmarkAllBtn){
+        //ToDo.. takeAt from widget?
+        delete this->unmarkAllBtn;
+        setUpUnmarkAllBtn();
+    }
+
+
     if(dynBtn == nullptr){
         qDebug() << "dynBtn is nullptr, exit!";
         exit(1);
@@ -168,9 +205,17 @@ void MainWindow::addDynBtnAtEndOfContentButtons(){
 
     // connect(dynBtn, SIGNAL(released()), this, SLOT(dynBtnWasPressed())); //moved elsewhere
 
-    qDebug() << "(CTOR) count: " << ui->scrollGrid->count()
+    qDebug() << "count: " << ui->scrollGrid->count()
              << ui->scrollGrid->rowCount() << ","
              << ui->scrollGrid->columnCount() << "\n";
+
+    if(contentBtnCount::getMarkedCnt() > 0){
+        qDebug() << "MODE >> RM!";
+        dynBtn->setMode(dynAddRmButton::btnModeRM);
+    }else{
+        qDebug() << "MODE >> ADD!";
+        dynBtn->setMode(dynAddRmButton::btnModeADD);
+    }
 }
 
 void MainWindow::loadButtonsFromJson(){
@@ -265,7 +310,7 @@ void MainWindow::loadButtonsFromJson(){
         qDebug() << "(~~~) insert at: " << " (" << row << "," << col << ") [x]";
 
         //create and append the new content button to list
-        contentButton *newContentBtn = new contentButton();
+        contentButton *newContentBtn = new contentButton(this);
 
         if(contentButtonValContentAsStr.isEmpty()){
             //ToDo: do something for this case... whatever it is...
@@ -283,9 +328,12 @@ void MainWindow::loadButtonsFromJson(){
 
 
         qDebug() << "Added to list";
-        connect(newContentBtn, SIGNAL(dynBtnNeedsSwitch()), dynBtn, SLOT(switchMode()));
+        connect(newContentBtn, SIGNAL(dynBtnSetMode(dynAddRmButton::btnMode)), dynBtn, SLOT(setMode(dynAddRmButton::btnMode)));
+        // connect(newContentBtn, SIGNAL(dynBtnNeedsSwitch()), dynBtn, SLOT(switchMode()));
+        // connect(newContentBtn, SIGNAL(dynBtnSetAddMode()), dynBtn, SLOT(switchMode()));
+        // connect(newContentBtn, SIGNAL(dynBtnSetRmMode()), dynBtn, SLOT(switchMode()));
         connect(newContentBtn, SIGNAL(keyWasPressed(int,int)), this, SLOT(processKeyPress(int,int)));
-        connect(newContentBtn, SIGNAL(cntButtonWasLeftClicked()), this, SLOT(unmarkAllCntButtons()));
+        // connect(newContentBtn, SIGNAL(cntButtonWasLeftClicked()), this, SLOT(unmarkAllCntButtons()));
         connect(newContentBtn, SIGNAL(startContentButtonEdit(int)), this, SLOT(openContentEdit(int)));
 
         qDebug() << "connected!";
@@ -343,8 +391,8 @@ void MainWindow::unmarkAllCntButtons(){
     int totalCnt = contentBtnCount::getTotalCnt();
     for(int i = 0; i < totalCnt; i++){
         contentButton *currBtn = contentBtnList.at(i);
-        if(currBtn->getIsMarked()){
-            currBtn->setUnmarked();
+        if(currBtn->isMarked()){
+            currBtn->unsetMarked();
         }
     }
     dynBtn->setMode(dynAddRmButton::btnModeADD);
@@ -353,7 +401,7 @@ void MainWindow::unmarkAllCntButtons(){
 void MainWindow::processArrowKeyPress(int key, int indexOfSender){
     qDebug() << "processArrowKeyPress (index of sender: " << indexOfSender << ")";
 
-    contentBtnList.at(indexOfSender)->unsetAsSelectedButton();
+    contentBtnList.at(indexOfSender)->unsetAsFocusedButton();
 
     int newIndex = -1;
 
@@ -410,7 +458,7 @@ void MainWindow::processDeleteKeyPress(int indexOfSender){
 
     //ToDo, once buttons have names/labels/titles, include it in the confirmation question's text
     reply = QMessageBox::question(this, "Delete Confirmation", "Do you really want to delete this button?",
-                                  QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes);
+                                  QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
     if(reply == QMessageBox::Yes){
         qDebug() << "Yes clicked";
@@ -424,38 +472,99 @@ void MainWindow::processDeleteKeyPress(int indexOfSender){
         qDebug() << "Reset clicked";
 
         contentButton *cntBtnLstItem = contentBtnList.at(indexOfSender);
-        if(cntBtnLstItem && cntBtnLstItem->getIsSelected()){
+        if(cntBtnLstItem && cntBtnLstItem->isFocused()){
             qDebug() << "  Item does exist and is selected right now";
             //clear it from being the selected button
-            cntBtnLstItem->unsetAsSelectedButton();
+            cntBtnLstItem->unsetAsFocusedButton();
         }
     }
     qDebug() << "/processDeleteKeyPress";
-
 }
 
 void MainWindow::processKeyPress(int key, int indexOfSender){
     qDebug() << "processKeyPress (index of sender: " << indexOfSender << ")";
-
     if(indexOfSender >= 0 && indexOfSender < contentBtnList.length()){
         if(key == Qt::Key_Left || key == Qt::Key_Right || key == Qt::Key_Up || key == Qt::Key_Down){
             processArrowKeyPress(key, indexOfSender);
         }else if(key == Qt::Key_Delete || key == Qt::Key_Backspace){
             processDeleteKeyPress(indexOfSender);
+        }else if(key == Qt::Key_Plus){
+            qDebug() << "PLUUUUUUUUS";
+            processActionAdd("");
+        }else if(key == Qt::Key_Minus){
+            processActionRm();
+        }else if(key == Qt::Key_Escape){
+            qDebug() << "ESCAAAAAAAAAAPE";
+            // this->unsetAsFocusedButton();
+            contentButton::clearFocusedButton();
+            this->unmarkAllCntButtons();
         }
     }else{
         qDebug() << "index is out of bounds.";
     }
-
     qDebug() << "/processKeyPress";
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event){
+    qDebug() << "Key press event! (MainWindow)";
+
+    int key = event->key();
+    if(key == Qt::Key_Plus){
+        processActionAdd("");
+    }else if(key == Qt::Key_Left || key == Qt::Key_Right
+               || key == Qt::Key_Up || key == Qt::Key_Down){
+        qDebug() << "Arrow Key!";
+        if(!contentBtnList.empty()){
+            contentBtnList.at(0)->setFocus();
+        }
+    }else if(key == Qt::Key_Return || key == Qt::Key_Enter){
+        qDebug() << "Enter pressed on MainWindow.";
+
+        if(this->ui->textInputField->hasFocus() || this->ui->buttonAdd->hasFocus()){
+            qDebug() << "Text field or add button has focus!";
+            this->processActionForAddButton();
+        }
+    }
+    qDebug() << "/ Key press event! (MainWindow)";
 
 }
 
-void MainWindow::dynBtnProcessForModeAdd(){
+void MainWindow::processActionForAddButton(){
+
+    //ToDo
+    qDebug() << "Add button clicked.";
+
+    QString currText = this->ui->textInputField->text();
+
+    if(!currText.isEmpty()){
+        qDebug() << "There is text.";
+
+        processActionAdd(currText);
+        this->ui->textInputField->setText("");
+
+    }else{
+        qDebug() << "No text in field.";
+    }
+}
+
+void MainWindow::processTextFieldChange(QString text){
+    if(!text.isEmpty()){
+        qDebug() << "processTextFieldChange (text: " << text << ")";
+        this->ui->buttonAdd->setEnabled(true);
+        this->ui->buttonSearch->setEnabled(true);
+    }else{
+        qDebug() << "processTextFieldChange, empty text.";
+        this->ui->buttonAdd->setDisabled(true);
+        this->ui->buttonSearch->setDisabled(true);
+    }
+}
+
+
+void MainWindow::processActionAdd(QString defaultText){
 
     //when adding a new button, any previous
     //button selection becomes invalid, clear
-    contentButton::clearButtonSelection();
+    // contentButton::clearFocusedButton(); //this code is not needed..
 
 
     //ToDo check if a profile has even been selected before...
@@ -478,8 +587,6 @@ void MainWindow::dynBtnProcessForModeAdd(){
 
     qDebug() << "(~~~) insert at: " << " (" << row << "," << col << ") [y]";
 
-    QString newBtnTxt = QString(QString::number(row) + "," + QString::number(col));
-
     QLayoutItem *currItem = ui->scrollGrid->takeAt(currItemCount-1); //get the dynAddRmButton
 
     //CHECK IF NEEDED
@@ -489,18 +596,28 @@ void MainWindow::dynBtnProcessForModeAdd(){
     //     delete i.layout();
 
     //create and append the new content button to list
-    {
-        contentButton *newContentBtn = new contentButton();
-        newContentBtn->setText(newBtnTxt);
-        ui->scrollGrid->addWidget(newContentBtn, row, col);
-        contentBtnList.append(newContentBtn);
-        this->updateIndexOfAllButtons();
+    contentButton *newContentBtn = new contentButton(this);
 
-        connect(newContentBtn, SIGNAL(dynBtnNeedsSwitch()), dynBtn, SLOT(switchMode()));
-        connect(newContentBtn, SIGNAL(keyWasPressed(int,int)), this, SLOT(processKeyPress(int,int)));
-        connect(newContentBtn, SIGNAL(cntButtonWasLeftClicked()), this, SLOT(unmarkAllCntButtons()));
-        connect(newContentBtn, SIGNAL(startContentButtonEdit(int)), this, SLOT(openContentEdit(int)));
+    if(!defaultText.isEmpty()){
+        newContentBtn->setText(defaultText);
+    }else{
+        QString newBtnTxt = QString(QString::number(row) + "," + QString::number(col));
+        newContentBtn->setText(newBtnTxt);
     }
+
+
+    ui->scrollGrid->addWidget(newContentBtn, row, col);
+    contentBtnList.append(newContentBtn);
+    this->updateIndexOfAllButtons();
+
+    connect(newContentBtn, SIGNAL(dynBtnSetMode(dynAddRmButton::btnMode)), dynBtn, SLOT(setMode(dynAddRmButton::btnMode)));
+    // connect(newContentBtn, SIGNAL(dynBtnNeedsSwitch()), dynBtn, SLOT(switchMode()));
+    // connect(newContentBtn, SIGNAL(dynBtnSetAddMode()), dynBtn, SLOT(switchMode()));
+    // connect(newContentBtn, SIGNAL(dynBtnSetRmMode()), dynBtn, SLOT(switchMode()));
+    connect(newContentBtn, SIGNAL(keyWasPressed(int,int)), this, SLOT(processKeyPress(int,int)));
+    // connect(newContentBtn, SIGNAL(cntButtonWasLeftClicked()), this, SLOT(unmarkAllCntButtons()));
+    connect(newContentBtn, SIGNAL(startContentButtonEdit(int)), this, SLOT(openContentEdit(int)));
+
 
     ui->scrollGrid->addWidget(currItem->widget(), rowAdd, colAdd); //re-inserts addButton
 
@@ -527,11 +644,11 @@ void MainWindow::removeSelectedButton(int index){
     //check if item exists + is marked
     //  1) if yes -> delete the item
     //  2) if no  -> do nothing except i++
-    if(cntBtnLstItem && cntBtnLstItem->getIsSelected()){
+    if(cntBtnLstItem && cntBtnLstItem->isFocused()){
         qDebug() << "  Item does exist and is selected right now";
 
         //clear it from being the selected button
-        cntBtnLstItem->unsetAsSelectedButton();
+        cntBtnLstItem->unsetAsFocusedButton();
 
         //delete from list
         contentBtnList.erase(contentBtnList.cbegin() + index);
@@ -563,7 +680,7 @@ void MainWindow::removeAllMarkedButtons(){
         //check if item exists + is marked
         //  1) if yes -> delete the item
         //  2) if no  -> do nothing except i++
-        if(cntBtnLstItem && cntBtnLstItem->getIsMarked()){
+        if(cntBtnLstItem && cntBtnLstItem->isMarked()){
             qDebug() << "  Item does exist (i: " << i << "totalCnt: " << totalBtnCnt << ") [1]";
             qDebug() << "  Item is marked --> DELETE!";
 
@@ -654,18 +771,18 @@ void MainWindow::rebuildGrid(){
 }
 
 
-void MainWindow::dynBtnProcessForModeRm(){
+void MainWindow::processActionRm(){
     qDebug() << "== btnModeRM";
 
     QMessageBox::StandardButton reply;
     reply = QMessageBox::question(this, "Delete Confirmation", "Do you really want to delete all marked items?",
-                                  QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes);
+                                  QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
     if(reply == QMessageBox::Yes){
         qDebug() << "No clicked";
 
         this->removeAllMarkedButtons();
-        this->dynBtn->switchMode();
+        // this->dynBtn->switchMode();
 
     }else if(reply == QMessageBox::No){
         qDebug() << "No clicked";
@@ -679,9 +796,9 @@ void MainWindow::dynBtnProcessForModeRm(){
 //slot
 void MainWindow::processDynBtnAction(){
     if(dynBtn->getCurrBtnMode() == dynAddRmButton::btnModeADD){
-        this->dynBtnProcessForModeAdd();
+        this->processActionAdd("");
     }else if(dynBtn->getCurrBtnMode() == dynAddRmButton::btnModeRM){
-        this->dynBtnProcessForModeRm();
+        this->processActionRm();
     }else{
         qDebug() << "current button mode is invalid.";
     }
@@ -694,7 +811,7 @@ void MainWindow::profileButtonClicked(){
     // profiles->show();
 
     //clear button selection before opening the menu
-    contentButton::clearButtonSelection();
+    contentButton::clearFocusedButton();
 
     if(profMenu){
         qDebug() << "profiles exist";
@@ -786,7 +903,7 @@ void MainWindow::openContentEdit(int indexOfSender){
 void MainWindow::mousePressEvent(QMouseEvent *event){
     qDebug() << "mousePressEvent";
     // this->unmarkAllCntButtons();
-    contentButton::clearButtonSelection();
+    contentButton::clearFocusedButton();
     qDebug() << "/mousePressEvent";
 }
 
@@ -798,7 +915,7 @@ void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
     if(mode == dynAddRmButton::btnModeADD){
         qDebug() << "=== ADD";
         // this->ui->hSpace2->
-        this->ui->txtInsert->show();
+        this->ui->textInputField->show();
         // this->ui->hSpace3->
         this->ui->buttonSearch->show();
         // this->ui->hSpace4->
@@ -811,7 +928,7 @@ void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
     }else if(mode == dynAddRmButton::btnModeRM){
         qDebug() << "=== RM";
         // this->ui->hSpace2->
-        this->ui->txtInsert->hide();
+        this->ui->textInputField->hide();
         // this->ui->hSpace3->
         this->ui->buttonSearch->hide();
         // this->ui->hSpace4->
@@ -825,12 +942,4 @@ void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
         qDebug() << "mode: " << mode << " is not a valid mode..";
     }
     qDebug() << "=== /adjustButtons";
-}
-
-
-
-void MainWindow::keyPressEvent(QKeyEvent *event){
-    qDebug() << "Key press event! (MainWindow)";
-    //ToDo check how to block arrow keys from moving the focus cursor
-    qDebug() << "/ Key press event! (MainWindow)";
 }

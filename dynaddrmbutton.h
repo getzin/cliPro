@@ -15,7 +15,6 @@ public:
     };
     dynAddRmButton(btnMode mode = btnModeADD);
     ~dynAddRmButton();
-    void setMode(btnMode mode = btnModeADD);
     btnMode getCurrBtnMode();
 
 signals:
@@ -23,6 +22,7 @@ signals:
     void dynBtnEnterKey();
 
 public slots:
+    void setMode(dynAddRmButton::btnMode mode = btnModeADD);
     void switchMode();
 
 protected:

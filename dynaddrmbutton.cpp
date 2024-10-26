@@ -34,8 +34,8 @@ void dynAddRmButton::setStyleSheetRm(){
 }
 
 
-void dynAddRmButton::setMode(btnMode mode){
-    qDebug() << "setMode";
+void dynAddRmButton::setMode(dynAddRmButton::btnMode mode){
+    qDebug() << "setMode (mode: " << mode << ")";
     if(mode == btnModeADD){
         this->setText("+");
         this->setStyleSheetAdd();
@@ -52,6 +52,17 @@ void dynAddRmButton::setMode(btnMode mode){
     qDebug() << "/setMode";
 }
 
+// void dynAddRmButton::setAddMode(){
+//     qDebug() << "    setAddMode (start)";
+//     this->setMode(btnModeADD);
+//     qDebug() << "    setAddMode (end)";
+// }
+// void dynAddRmButton::setRmMode(){
+//     qDebug() << "    setRmMode (start)";
+//     this->setMode(btnModeRM);
+//     qDebug() << "    setRmMode (end)";
+// }
+
 void dynAddRmButton::switchMode(){
     qDebug() << "    Switch mode (start)";
     this->setMode(currBtnMode == btnModeADD ? btnModeRM : btnModeADD);
@@ -67,7 +78,7 @@ void dynAddRmButton::keyPressEvent(QKeyEvent *event){
     qDebug() << "Key press event! (dynAddRmButton)";
     int key = event->key();
     if(key == Qt::Key_Return || key == Qt::Key_Enter){
-        qDebug() << "Enter pressed.";
+        qDebug() << "(dynAddRmButton) Enter pressed.";
         // if(currBtnMode == btnModeADD){
         //     emit dynBtnEnterKey();
         // }else if(currBtnMode == btnModeADD){

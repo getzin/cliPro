@@ -7,6 +7,8 @@ contentEdit::contentEdit(QWidget *parent)
 {
     ui->setupUi(this);
 
+    this->setWindowTitle("Edit text"); //ToDo consider Title? Or maybe contentEdit should have 2 text inputs (title + text)?
+
     connect(ui->btnCancel, SIGNAL(clicked()), this, SLOT(close()));
     connect(ui->btnSaveOnly, SIGNAL(clicked()), this, SLOT(handleSaveOnly()));
     connect(ui->btnSaveAndClose, SIGNAL(clicked()), this, SLOT(handleSaveAndClose()));
@@ -30,6 +32,7 @@ void contentEdit::editButton(contentButton* btn){
     }else{
         currentlyEditing = btn;
         this->ui->textEdit->setText(btn->text());
+        this->ui->textEdit->setFocus(); //ToDo check again if really needed
         this->show();
     }
 }

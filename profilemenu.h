@@ -68,6 +68,9 @@ private:
     void createNewProfilesJson(QString name);
     void deleteProfilesJson(QString name);
     void timedPopUp(int timer_ms, QString message);
+    bool checkForDuplicate(bool isEditOperation, QString userInput);
+    void addEditNameActionToUnsavedActions(QString userInput);
+    void addNewNameActionToUnsavedActions(QString userInput);
     bool getUserInputAndCheck(bool isEditOperation, QString windowName, QString promptText, QString defaultTxtForInput);
     static bool checkStringIsAlphanumeric(QString strToCheck);
     // void setSaveEnabled();

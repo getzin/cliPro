@@ -6,8 +6,10 @@
 class contentBtnCount {
 public:
     static int getTotalCnt(){ return totalContentBtnCount; }
+    static int getMarkedCnt(){ return markedContentBtnCount; }
 
 protected:
+    //ctor as protected, to make this class only be usable as base class, but not instantiable
     contentBtnCount(){
         totalContentBtnCount++;
         qDebug() << "contentBtnCount (Ctor) | post-creation-button-count: " << totalContentBtnCount;
@@ -20,7 +22,6 @@ protected:
 
     static int incrMarkedCnt(){ return ++markedContentBtnCount; }
     static int decrMarkedCnt(){ return --markedContentBtnCount; }
-    static int getMarkedCnt(){ return markedContentBtnCount; }
 
 private:
     static int totalContentBtnCount;

@@ -46,13 +46,15 @@ private slots:
     void processKeyPress(int key, int indexOfSender);
     void openContentEdit(int indexOfSender);
     void adjustButtons(dynAddRmButton::btnMode mode);
+    void processActionForAddButton();
+    void processTextFieldChange(QString);
 
 private:
     //methods
     void addDynBtnAtEndOfContentButtons();
     // dynAddRmButton* getOrCreateDynBtn();
-    void dynBtnProcessForModeAdd();
-    void dynBtnProcessForModeRm();
+    void processActionAdd(QString defaultText);
+    void processActionRm();
     void updateIndexOfAllButtons();
     void removeAllMarkedButtons();
     void deleteAllItemsFromGrid();
@@ -64,6 +66,9 @@ private:
     void removeSelectedButton(int index);
     void processArrowKeyPress(int key, int indexOfSender);
     void processDeleteKeyPress(int indexOfSender);
+
+    // void setUpDynBtn();
+    void setUpUnmarkAllBtn();
 
     //variables & consts
     Ui::MainWindow *ui;

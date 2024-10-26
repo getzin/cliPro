@@ -320,7 +320,8 @@ void profileMenu::deleteButtonPressed(){
 
     confirmationText.append("</b> with all its clips? <br><br><i>(WARNING: This is irreversible)</i>");
 
-    reply = messageBox.question(this, "Delete Confirmation", confirmationText, QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes);
+    reply = messageBox.question(this, "Delete Confirmation", confirmationText,
+                                QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
     if(reply == QMessageBox::Yes){
         int currRow = ui->visibleProfileList->currentRow();
@@ -367,7 +368,7 @@ void profileMenu::renameProfilesJson(QString oldName, QString newName){
 
 void profileMenu::createNewProfilesJson(QString name){
     qDebug() << "-- createNewProfilesJson. input: " << name;
-    QString namePath = constructFilePathForProfileJson(name);
+    //QString namePath = constructFilePathForProfileJson(name);
     ; //ToDo create some kind of default json
     emit this->newProfileCreated(name);
 }
@@ -488,6 +489,44 @@ bool profileMenu::checkStringIsAlphanumeric(QString strToCheck){
     return stringIsValid;
 }
 
+bool profileMenu::checkForDuplicate(bool isEditOperation, QString userInput){
+    for(int i = 0; i < ui->visibleProfileList->count(); i++){
+        if(userInput == ui->visibleProfileList->item(i)->text()){
+            //if we are editing an existing name, and it hasn't change
+            //  then that is not a duplicate & we will accept the input
+            if(isEditOperation && ui->visibleProfileList->currentRow() == i){
+                qDebug() << "Profile name edit -- Text has not changed!";
+                return false;
+            }else{
+                qDebug() << "Profile name edit -- Text is a duplicate!";
+                return true;
+            }
+            break;
+        }
+    }
+    return false;
+}
+
+void profileMenu::addEditNameActionToUnsavedActions(QString userInput){
+    //if(1){} //maybe add additional check for correctness of index before editing?
+    QString oldName = ui->visibleProfileList->selectedItems().at(0)->text();
+    ui->visibleProfileList->selectedItems().at(0)->setText(userInput);
+
+    qDebug() << "   ## (edit) oldName: " << oldName << ", userInput: " << userInput;
+
+    profAction act{oldName, userInput};
+    this->unsavedActions.append(act);
+}
+
+void profileMenu::addNewNameActionToUnsavedActions(QString userInput){
+    ui->visibleProfileList->addItem(userInput);
+
+    qDebug() << "   ## (new) userInput: " << userInput;
+
+    profAction act{"", userInput};
+    this->unsavedActions.append(act);
+}
+
 //isEditOperation == false --> is "new" operation (new item added to list)
 bool profileMenu::getUserInputAndCheck(bool isEditOperation, QString windowName, QString promptText, QString defaultTxtForInput){
     bool inputOK;
@@ -495,50 +534,34 @@ bool profileMenu::getUserInputAndCheck(bool isEditOperation, QString windowName,
                                               QLineEdit::Normal, defaultTxtForInput, &inputOK);
     bool stringValid = false;
     if (inputOK){
-        if((!userInput.isEmpty()) && checkStringIsAlphanumeric(userInput)){
+        if((!userInput.isEmpty())){
 
+            if(checkStringIsAlphanumeric(userInput)){
+                //check for possible duplicate (not allowed) before adding the new string
+                if(this->checkForDuplicate(isEditOperation, userInput)){
+                    qDebug() << "Input OK";
+                    stringValid = true;
 
-            //check for possible duplicate (not allowed) before adding the new string
-            bool isDuplicate = false;
-            for(int i = 0; i < ui->visibleProfileList->count(); i++){
-                if(userInput == ui->visibleProfileList->item(i)->text()){
-                    isDuplicate = true;
-                    break;
-                }
-            }
-
-            if(!isDuplicate){
-                qDebug() << "Input OK";
-                stringValid = true;
-
-                if(isEditOperation == true){
-                    //if(1){} //maybe add additional check for correctness of index before editing?
-                    QString oldName = ui->visibleProfileList->selectedItems().at(0)->text();
-                    ui->visibleProfileList->selectedItems().at(0)->setText(userInput);
-
-                    qDebug() << "   ## (edit) oldName: " << oldName << ", userInput: " << userInput;
-
-                    profAction act{oldName, userInput};
-                    this->unsavedActions.append(act);
+                    if(isEditOperation == true){
+                        this->addEditNameActionToUnsavedActions(userInput);
+                    }else{
+                        this->addNewNameActionToUnsavedActions(userInput);
+                    }
                 }else{
-                    ui->visibleProfileList->addItem(userInput);
-
-                    qDebug() << "   ## (new) userInput: " << userInput;
-
-                    profAction act{"", userInput};
-                    this->unsavedActions.append(act);
+                    QString tmpErrorStr;
+                    tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list! Please choose another name.");
+                    this->timedPopUp(this->defaultTimer, tmpErrorStr);
+                    qDebug() << "Input (" << userInput << ") is a duplicate!";
                 }
             }else{
                 QString tmpErrorStr;
-                tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list! Please choose another name.");
+                tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string.");
                 this->timedPopUp(this->defaultTimer, tmpErrorStr);
-                qDebug() << "Input (" << userInput << ") is a duplicate!";
+                qDebug() << "Input not OK";
             }
         }else{
-            QString tmpErrorStr;
-            tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string");
-            this->timedPopUp(this->defaultTimer, tmpErrorStr);
-            qDebug() << "Input not OK";
+            this->timedPopUp(this->defaultTimer, "Empty name is not allowed.");
+            qDebug() << "Input is empty!";
         }
     }
     return stringValid;
