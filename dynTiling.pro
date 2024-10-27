@@ -14,6 +14,7 @@ SOURCES += \
     dynaddrmbutton.cpp \
     main.cpp \
     mainwindow.cpp \
+    profiledialog.cpp \
     profilemenu.cpp
 
 HEADERS += \
@@ -22,11 +23,14 @@ HEADERS += \
     contentedit.h \
     dynaddrmbutton.h \
     mainwindow.h \
-    profilemenu.h
+    profiledialog.h \
+    profilemenu.h \
+    timedpopup.h
 
 FORMS += \
     contentedit.ui \
     mainwindow.ui \
+    profiledialog.ui \
     profilemenu.ui
 
 # Default rules for deployment.

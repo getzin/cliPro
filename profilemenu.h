@@ -1,6 +1,7 @@
 #ifndef PROFILEMENU_H
 #define PROFILEMENU_H
 
+#include "profiledialog.h"
 #include <QDialog>
 
 namespace Ui {
@@ -27,6 +28,18 @@ protected:
     //QStringList* getProfiles();
     void loadProfiles();
     void saveProfiles();
+
+private slots:
+    // void newButtonPressed();
+    // void editButtonPressed();
+    void deleteButtonPressed();
+    void cancelButtonPressed();
+    void saveButtonPressed();
+
+    void handleSelectionChange();
+
+    void addEditNameActionToUnsavedActions(QString oldName, QString newName);
+    void addNewNameActionToUnsavedActions(QString newName);
 
 private:
     //checkForDuplicate();
@@ -58,7 +71,6 @@ private:
     static const QString settingsProfilesListVal;
     static const QString settingsProfilesCurrSelID;
     static const QString settingsFile;
-    static const int defaultTimer = 3000; //ms
 
     void initVisibleListFromInternal();
     void reconstructVisibleListFromInternal();
@@ -67,25 +79,22 @@ private:
     void renameProfilesJson(QString oldName, QString newName);
     void createNewProfilesJson(QString name);
     void deleteProfilesJson(QString name);
-    void timedPopUp(int timer_ms, QString message);
-    bool checkForDuplicate(bool isEditOperation, QString userInput);
-    void addEditNameActionToUnsavedActions(QString userInput);
-    void addNewNameActionToUnsavedActions(QString userInput);
-    bool getUserInputAndCheck(bool isEditOperation, QString windowName, QString promptText, QString defaultTxtForInput);
-    static bool checkStringIsAlphanumeric(QString strToCheck);
+    // void timedPopUp(int timer_ms, QString message);
+
+
+    // bool nameCanBeUsed(bool isEditOperation, QString userInput);
+    // void addEditNameActionToUnsavedActions(QString userInput);
+    // void addNewNameActionToUnsavedActions(QString userInput);
+    // bool getUserInputAndCheck(bool isEditOperation, QString windowName, QString promptText, QString defaultTxtForInput);
+    // static bool checkStringIsAlphanumeric(QString strToCheck);
+
     // void setSaveEnabled();
     // void setSaveDisabled();
     void setEditDelEnabled();
     void setEditDelDisabled();
 
-private slots:
-    void newButtonPressed();
-    void editButtonPressed();
-    void deleteButtonPressed();
-    void cancelButtonPressed();
-    void saveButtonPressed();
+    profileDialog dialog;
 
-    void handleSelectionChange();
 };
 
 #endif // PROFILEMENU_H

@@ -6,7 +6,8 @@
 #include <QInputDialog>
 #include <QDir>
 #include <QSettings>
-#include <QTimer>
+
+#include "timedpopup.h"
 
 const QString profileMenu::appName = "cliProV1";
 const QString profileMenu::appAuthor = "Andreas Getzin";
@@ -47,11 +48,16 @@ profileMenu::profileMenu(QWidget *parent)
     //     this->ui->visibleProfileList->insertItem(i, this->internalProfilesList->at(i));
     // }
 
-    connect(ui->btnNew, SIGNAL(clicked()), this, SLOT(newButtonPressed())); //new button
-    connect(ui->btnEdit, SIGNAL(clicked()), this, SLOT(editButtonPressed())); //edit button
-    connect(ui->btnDelete, SIGNAL(clicked()), this, SLOT(deleteButtonPressed())); //edit button
+    // connect(ui->btnNew, SIGNAL(clicked()), this, SLOT(newButtonPressed())); //new button
+    // connect(ui->btnEdit, SIGNAL(clicked()), this, SLOT(editButtonPressed())); //edit button
+    connect(ui->btnNew, SIGNAL(clicked()), &dialog, SLOT(newProfile())); //new button
+    connect(ui->btnEdit, SIGNAL(clicked()), &dialog, SLOT(editProfile())); //edit button
+    connect(ui->btnDelete, SIGNAL(clicked()), this, SLOT(deleteButtonPressed())); //delete button
     connect(ui->btnCancel, SIGNAL(clicked()), this, SLOT(cancelButtonPressed())); //cancel button
-    connect(ui->btnSave, SIGNAL(clicked()), this, SLOT(saveButtonPressed())); //confirm button
+    connect(ui->btnSave, SIGNAL(clicked()), this, SLOT(saveButtonPressed())); //save button
+
+    connect(&dialog, SIGNAL(editName(QString,QString)), this, SLOT(addEditNameActionToUnsavedActions(QString,QString)));
+    connect(&dialog, SIGNAL(newName(QString)), this, SLOT(addNewNameActionToUnsavedActions(QString)));
 
     connect(ui->visibleProfileList, SIGNAL(itemSelectionChanged()), this, SLOT(handleSelectionChange()));
 
@@ -66,6 +72,9 @@ profileMenu::profileMenu(QWidget *parent)
 
 
     //ToDo logic for "last used profile" should go here
+
+    dialog.setPtrToListWidget(this->ui->visibleProfileList);
+
 }
 
 profileMenu::~profileMenu()
@@ -232,66 +241,83 @@ void profileMenu::saveProfiles(){
     qDebug() << "End: Saving profiles";
 }
 
-void profileMenu::newButtonPressed(){
-    qDebug("Profiles: New Button pressed");
+// void profileMenu::newButtonPressed(){
+//     qDebug("Profiles: New Button pressed");
 
-    // QInputDialog nameEntry;
-    // nameEntry.setVisible(true);
-    // nameEntry.show();
+//     // QInputDialog nameEntry;
+//     // nameEntry.setVisible(true);
+//     // nameEntry.show();
 
-    // bool isOK;
-    // QString newProfileName = QInputDialog::getText(this, tr("New profile"),
-    //                                      tr("Name (letters/numbers only):"), QLineEdit::Normal,
-    //                                      "", &isOK);
+//     // bool isOK;
+//     // QString newProfileName = QInputDialog::getText(this, tr("New profile"),
+//     //                                      tr("Name (letters/numbers only):"), QLineEdit::Normal,
+//     //                                      "", &isOK);
 
-    // if(isOK && !newProfileName.isEmpty()
-    //         && checkStringIsAlphanumeric(newProfileName)){
-    //     qDebug() << "Input OK";
-    //     ui->visibleProfileList->addItem(newProfileName);
-    // }else{
-    //     qDebug() << "Input not OK";
-    // }
+//     // if(isOK && !newProfileName.isEmpty()
+//     //         && checkStringIsAlphanumeric(newProfileName)){
+//     //     qDebug() << "Input OK";
+//     //     ui->visibleProfileList->addItem(newProfileName);
+//     // }else{
+//     //     qDebug() << "Input not OK";
+//     // }
 
-    getUserInputAndCheck(false, tr("New profile"), tr("Name (letters/numbers only):"), "");
+//     //
+//     //ToDo make it permanent... need to update the QSettings thing... maybe emit a signal?
+//     //
 
-    //
-    //ToDo make it permanent... need to update the QSettings thing... maybe emit a signal?
-    //
-}
+//     //=====previous working code=====
+//     // getUserInputAndCheck(false, tr("New profile"), tr("Name (letters/numbers only):"), "");
 
-void profileMenu::editButtonPressed(){
-    qDebug("Profiles: Edit Button pressed");
+//     dialog.newProfile();
+// }
 
-    //we can only select 1 item, but it also has to be selected
-    if(ui->visibleProfileList->selectedItems().size() == 1){
-        QString currentItemTxt = ui->visibleProfileList->selectedItems().at(0)->text();
+// void profileMenu::editButtonPressed(){
+//     qDebug("Profiles: Edit Button pressed");
 
-        // bool isOK;
-        // QString editedProfileName = QInputDialog::getText(this, tr("Edit profile name"),
-        //                                      tr("Change name to:"), QLineEdit::Normal,
-        //                                      currentItemTxt, &isOK);
-        // if (isOK && !editedProfileName.isEmpty()
-        //          && checkStringIsAlphanumeric(editedProfileName)){
-        //     qDebug() << "Input OK";
-        //     ui->visibleProfileList->selectedItems().at(0)->setText(editedProfileName);
-        // }else{
-        //     QString tmpErrorStr;
-        //     tmpErrorStr.append("ERROR: <b>").append(editedProfileName).append("</b> is not a valid string");
-        //     this->timedPopUp(this->defaultTimer, tmpErrorStr);
-        //     qDebug() << "Input not OK";
-        // }
+//     //we can only select 1 item, but it also has to be selected
+//     // if(ui->visibleProfileList->selectedItems().size() == 1){
+//         // QString currentItemTxt = ui->visibleProfileList->selectedItems().at(0)->text();
 
-        getUserInputAndCheck(true, tr("Edit profile name"), tr("Change name to:"), currentItemTxt);
-    }else{
-        this->timedPopUp(this->defaultTimer, "No profile selected.");
-    }
+//         // bool isOK;
+//         // QString editedProfileName = QInputDialog::getText(this, tr("Edit profile name"),
+//         //                                      tr("Change name to:"), QLineEdit::Normal,
+//         //                                      currentItemTxt, &isOK);
+//         // if (isOK && !editedProfileName.isEmpty()
+//         //          && checkStringIsAlphanumeric(editedProfileName)){
+//         //     qDebug() << "Input OK";
+//         //     ui->visibleProfileList->selectedItems().at(0)->setText(editedProfileName);
+//         // }else{
+//         //     QString tmpErrorStr;
+//         //     tmpErrorStr.append("ERROR: <b>").append(editedProfileName).append("</b> is not a valid string");
+//         //     this->timedPopUp(this->defaultTimer, tmpErrorStr);
+//         //     qDebug() << "Input not OK";
+//         // }
 
-    //TRY TO DO INLINE EDITING... DIDN'T WORK...
-    // int currRow = ui->visibleProfileList->currentRow();
-    // qDebug() << "currRow: " << currRow;
-    // QListWidgetItem* currItem = ui->visibleProfileList->item(currRow);
-    // ui->visibleProfileList->editItem(currItem);
-}
+
+//         //=====previous working code=====
+//         // getUserInputAndCheck(true, tr("Edit profile name"), tr("Change name to:"), currentItemTxt);
+
+
+//         // if(!currentItemTxt.isEmpty()){
+//             // dialog.editProfile(ui->visibleProfileList, ui->visibleProfileList->currentRow(), currentItemTxt);
+//         // }else{
+//         //     qDebug() << "Error: currentItemTxt is empty!"; //error
+//         // }
+
+//     //     dialog.editProfile();
+
+//     // }else{
+//     //     timedPopUp(defaultPopUpTimer, "No profile selected.");
+//     // }
+
+//     //TRY TO DO INLINE EDITING... DIDN'T WORK...
+//     // int currRow = ui->visibleProfileList->currentRow();
+//     // qDebug() << "currRow: " << currRow;
+//     // QListWidgetItem* currItem = ui->visibleProfileList->item(currRow);
+//     // ui->visibleProfileList->editItem(currItem);
+
+//     dialog.editProfile();
+// }
 
 void profileMenu::deleteButtonPressed(){
     qDebug("Profiles: Delete Button pressed");
@@ -439,7 +465,7 @@ void profileMenu::saveButtonPressed(){
         this->processProfilesActions();
         close();
     }else{
-        this->timedPopUp(3000, "<p align='center'>Please<br><b>select a profile</b><br>to continue.</p>");
+        timedPopUp(this, 3000, "<p align='center'>Please<br><b>select a profile</b><br>to continue.</p>");
         qDebug() << "no profile selected!";
     }
 
@@ -455,118 +481,141 @@ void profileMenu::saveButtonPressed(){
     }
 }
 
-void profileMenu::timedPopUp(int timer_ms, QString message){
-    QMessageBox msgBox;
-    QTimer::singleShot(timer_ms, &msgBox, &QMessageBox::close);
-    msgBox.setStandardButtons(QMessageBox::Close);
-    msgBox.setDefaultButton(QMessageBox::Close);
-    msgBox.setText(message);
-    msgBox.setWindowTitle("ERROR");
-    msgBox.exec();
-}
+// //static
+// bool profileMenu::checkStringIsAlphanumeric(QString strToCheck){
+//     bool stringIsValid = true;
+//     int strSize = strToCheck.size();
+//     qDebug() << "Str Size: " << strSize;
+//     if(strSize > 0){
+//         //check each character individually
+//         //(sadly there doesn't appear to exist a library utility function for this)
+//         for(int i = 0; i < strSize && stringIsValid == true; i++){
+//             qDebug() << "i :" << i;
+//             if (!(strToCheck[i].isDigit() || strToCheck[i].isLetter())){
+//                 qDebug() << "Break! String is not valid";
+//                 stringIsValid = false;
+//                 break;
+//             }
+//         }
+//     }else{
+//         stringIsValid = false;
+//     }
 
-//static
-bool profileMenu::checkStringIsAlphanumeric(QString strToCheck){
-    bool stringIsValid = true;
-    int strSize = strToCheck.size();
-    qDebug() << "Str Size: " << strSize;
-    if(strSize > 0){
-        //check each character individually
-        //(sadly there doesn't appear to exist a library utility function for this)
-        for(int i = 0; i < strSize && stringIsValid == true; i++){
-            qDebug() << "i :" << i;
-            if (!(strToCheck[i].isDigit() || strToCheck[i].isLetter())){
-                qDebug() << "Break! String is not valid";
-                stringIsValid = false;
-                break;
-            }
-        }
-    }else{
-        stringIsValid = false;
-    }
+//     qDebug() << "stringIsValid: " << stringIsValid;
+//     return stringIsValid;
+// }
 
-    qDebug() << "stringIsValid: " << stringIsValid;
-    return stringIsValid;
-}
+// bool profileMenu::nameCanBeUsed(bool isEditOperation, QString userInput){
 
-bool profileMenu::checkForDuplicate(bool isEditOperation, QString userInput){
-    for(int i = 0; i < ui->visibleProfileList->count(); i++){
-        if(userInput == ui->visibleProfileList->item(i)->text()){
-            //if we are editing an existing name, and it hasn't change
-            //  then that is not a duplicate & we will accept the input
-            if(isEditOperation && ui->visibleProfileList->currentRow() == i){
-                qDebug() << "Profile name edit -- Text has not changed!";
-                return false;
-            }else{
-                qDebug() << "Profile name edit -- Text is a duplicate!";
-                return true;
-            }
-            break;
-        }
-    }
-    return false;
-}
+//     qDebug() << "start: checkForDuplicate";
 
-void profileMenu::addEditNameActionToUnsavedActions(QString userInput){
+//     qDebug() << "isEditOperation: " << isEditOperation;
+
+//     for(int i = 0; i < ui->visibleProfileList->count(); i++){
+//         if(userInput == ui->visibleProfileList->item(i)->text()){
+
+//             qDebug() << "Same text!";
+//             //if we are editing an existing name, and it hasn't change
+//             //  then that is not a duplicate & we will accept the input
+
+//             qDebug() << "i: " << i;
+//             qDebug() << "ui->visibleProfileList->currentRow(): " << ui->visibleProfileList->currentRow();
+
+//             if(isEditOperation && (ui->visibleProfileList->currentRow() == i)){
+//                 qDebug() << "Profile name edit -- Text has not changed!";
+//                 return true;
+//             }else{
+//                 qDebug() << "Profile name edit -- Text is a duplicate!";
+//                 return false;
+//             }
+//         }
+//     }
+
+//     qDebug() << "end: checkForDuplicate (none found)";
+
+//     return true;
+// }
+
+// void profileMenu::addEditNameActionToUnsavedActions(QString userInput){
+//     //if(1){} //maybe add additional check for correctness of index before editing?
+//     QString oldName = ui->visibleProfileList->selectedItems().at(0)->text();
+//     ui->visibleProfileList->selectedItems().at(0)->setText(userInput);
+
+//     qDebug() << "   ## (edit) oldName: " << oldName << ", userInput: " << userInput;
+
+//     profAction act{oldName, userInput};
+//     this->unsavedActions.append(act);
+// }
+
+// void profileMenu::addNewNameActionToUnsavedActions(QString userInput){
+//     ui->visibleProfileList->addItem(userInput);
+
+//     qDebug() << "   ## (new) userInput: " << userInput;
+
+//     profAction act{"", userInput};
+//     this->unsavedActions.append(act);
+// }
+
+// //isEditOperation == false --> is "new" operation (new item added to list)
+// bool profileMenu::getUserInputAndCheck(bool isEditOperation, QString windowName, QString promptText, QString defaultTxtForInput){
+//     bool inputOK;
+//     QString userInput = QInputDialog::getText(this, windowName, promptText,
+//                                               QLineEdit::Normal, defaultTxtForInput, &inputOK);
+//     bool stringValid = false;
+//     if (inputOK){
+//         if((!userInput.isEmpty())){
+
+//             if(checkStringIsAlphanumeric(userInput)){
+//                 //check for possible duplicate (not allowed) before adding the new string
+//                 if(this->nameCanBeUsed(isEditOperation, userInput)){
+//                     qDebug() << "Input OK";
+//                     stringValid = true;
+
+//                     if(isEditOperation == true){
+//                         this->addEditNameActionToUnsavedActions(userInput);
+//                     }else{
+//                         this->addNewNameActionToUnsavedActions(userInput);
+//                     }
+//                 }else{
+//                     QString tmpErrorStr;
+//                     tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list! Please choose another name.");
+//                     timedPopUp(defaultPopUpTimer, tmpErrorStr);
+//                     qDebug() << "Input (" << userInput << ") is a duplicate!";
+//                 }
+//             }else{
+//                 QString tmpErrorStr;
+//                 tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string.");
+//                 timedPopUp(defaultPopUpTimer, tmpErrorStr);
+//                 qDebug() << "Input not OK";
+//             }
+//         }else{
+//             timedPopUp(defaultPopUpTimer, "Empty name is not allowed.");
+//             qDebug() << "Input is empty!";
+//         }
+//     }
+//     return stringValid;
+// }
+
+void profileMenu::addEditNameActionToUnsavedActions(QString oldName, QString newName){
     //if(1){} //maybe add additional check for correctness of index before editing?
-    QString oldName = ui->visibleProfileList->selectedItems().at(0)->text();
-    ui->visibleProfileList->selectedItems().at(0)->setText(userInput);
+    // QString oldName = ui->visibleProfileList->selectedItems().at(0)->text();
 
-    qDebug() << "   ## (edit) oldName: " << oldName << ", userInput: " << userInput;
-
-    profAction act{oldName, userInput};
+    ui->visibleProfileList->selectedItems().at(0)->setText(newName);
+    qDebug() << "   ## (edit) oldName: " << oldName << ", newName: " << newName;
+    profAction act{oldName, newName};
     this->unsavedActions.append(act);
+    this->dialog.close();
 }
 
-void profileMenu::addNewNameActionToUnsavedActions(QString userInput){
-    ui->visibleProfileList->addItem(userInput);
+void profileMenu::addNewNameActionToUnsavedActions(QString newName){
+    ui->visibleProfileList->addItem(newName);
 
-    qDebug() << "   ## (new) userInput: " << userInput;
+    qDebug() << "   ## (new) userInput: " << newName;
 
-    profAction act{"", userInput};
+    profAction act{"", newName};
     this->unsavedActions.append(act);
+    this->dialog.close();
 }
-
-//isEditOperation == false --> is "new" operation (new item added to list)
-bool profileMenu::getUserInputAndCheck(bool isEditOperation, QString windowName, QString promptText, QString defaultTxtForInput){
-    bool inputOK;
-    QString userInput = QInputDialog::getText(this, windowName, promptText,
-                                              QLineEdit::Normal, defaultTxtForInput, &inputOK);
-    bool stringValid = false;
-    if (inputOK){
-        if((!userInput.isEmpty())){
-
-            if(checkStringIsAlphanumeric(userInput)){
-                //check for possible duplicate (not allowed) before adding the new string
-                if(this->checkForDuplicate(isEditOperation, userInput)){
-                    qDebug() << "Input OK";
-                    stringValid = true;
-
-                    if(isEditOperation == true){
-                        this->addEditNameActionToUnsavedActions(userInput);
-                    }else{
-                        this->addNewNameActionToUnsavedActions(userInput);
-                    }
-                }else{
-                    QString tmpErrorStr;
-                    tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list! Please choose another name.");
-                    this->timedPopUp(this->defaultTimer, tmpErrorStr);
-                    qDebug() << "Input (" << userInput << ") is a duplicate!";
-                }
-            }else{
-                QString tmpErrorStr;
-                tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string.");
-                this->timedPopUp(this->defaultTimer, tmpErrorStr);
-                qDebug() << "Input not OK";
-            }
-        }else{
-            this->timedPopUp(this->defaultTimer, "Empty name is not allowed.");
-            qDebug() << "Input is empty!";
-        }
-    }
-    return stringValid;
-}
-
 
 QString profileMenu::getCurrSelProfileName(){
     if(this->lastSavedSelProfileID >= 0 && this->lastSavedSelProfileID < this->internalProfilesList.count()){
