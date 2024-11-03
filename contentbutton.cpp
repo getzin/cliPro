@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QMouseEvent>
 #include <QClipboard>
+#include <QMessageBox>
 
 
 int contentBtnCount::totalContentBtnCount = 0;
@@ -185,7 +186,29 @@ void contentButton::keyPressEvent(QKeyEvent *event){
     if(key == Qt::Key_C){
         QGuiApplication::clipboard()->setText(this->text());
     }else if(key == Qt::Key_V){
-        this->setText(QGuiApplication::clipboard()->text());
+
+        bool save = true;
+        if(this->text().length() > 0){
+
+            qDebug() << "There already is text!";
+            QMessageBox::StandardButton reply;
+
+            reply = QMessageBox::question(this, "Override Confirmation", "Do you really want to override the existing content for this button?",
+                                          QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
+
+            if(reply == QMessageBox::Yes){
+                qDebug() << "Yes clicked";
+                // this->removeSelectedButton(indexOfSender);
+            }else if(reply == QMessageBox::No){
+                qDebug() << "No clicked";
+                save = false;
+            }
+        }
+
+        if(save){
+            this->setText(QGuiApplication::clipboard()->text());
+        }
+
     }else if(key == Qt::Key_Left || key == Qt::Key_Right
                || key == Qt::Key_Up || key == Qt::Key_Down
                || key == Qt::Key_Delete || key == Qt::Key_Backspace
