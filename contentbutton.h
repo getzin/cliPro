@@ -4,6 +4,8 @@
 #include <QAbstractButton>
 #include <QPushButton>
 #include <QMainWindow>
+#include <QMenu>
+#include <QAction>
 
 #include "contentbtncount.h"
 #include "dynaddrmbutton.h"
@@ -44,9 +46,13 @@ protected:
     void focusOutEvent(QFocusEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
 
+private slots:
+    void handleTitleAdjust();
+    void markForDeletion();
+
 private:
-    bool marked = false;
     static contentButton *focusedButton;
+    bool marked = false;
 
     bool notMarked();
     bool notFocused();
@@ -62,8 +68,18 @@ private:
 
     void checkForDynBtnSwitch();
 
+    void openMenu(QPoint p);
     void mouseLeftClick();
-    void mouseRightClick();
+    void mouseRightClick(QMouseEvent *event);
+
+    QMenu optionsMenu; //right-click menu (but can be opened via keyboard too)
+    QAction adjustTitleAction;
+    QAction markForDeleteAction;
+
+    static const QString textForTitleAddition;
+    static const QString textForTitleEditing;
+    static const QString textForMarkDeletion;
+    static const QString textForUnmarkDeletion;
 };
 
 #endif // CONTENTBUTTON_H

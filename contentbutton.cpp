@@ -6,13 +6,22 @@
 #include <QClipboard>
 
 
+
+const QString contentButton::textForTitleAddition = "Add title";
+const QString contentButton::textForTitleEditing = "Edit title";
+const QString contentButton::textForMarkDeletion = "Mark for deletion";
+const QString contentButton::textForUnmarkDeletion = "Unmark from deletion";
+
 int contentBtnCount::totalContentBtnCount = 0;
 int contentBtnCount::markedContentBtnCount = 0;
 contentButton* contentButton::focusedButton = nullptr;
 
 // contentButton::contentButton(dynAddRmButton *dynBtnPtr){
 contentButton::contentButton(QWidget *parent)
-    : QPushButton(parent){
+    : QPushButton(parent),
+      adjustTitleAction(textForTitleAddition, this),
+      markForDeleteAction(textForMarkDeletion, this)
+{
     this->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
     this->setStyleDefault();
     // this->setFocusPolicy(Qt::ClickFocus); //disables tab focus
@@ -23,7 +32,15 @@ contentButton::contentButton(QWidget *parent)
     //                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fafacd, stop:1 #f7f7ba) }");
     // dynBtn = dynBtnPtr;
     this->indexInGrid = getTotalCnt() - 1; //-1 here, as the number is already increased (see ctor of contentbtncount.h)
+
+    //---MENU---
+    optionsMenu.addAction(&adjustTitleAction);
+    optionsMenu.addSeparator();
+    optionsMenu.addAction(&markForDeleteAction);
+    connect(&adjustTitleAction, SIGNAL(triggered()), this, SLOT(handleTitleAdjust()));
+    connect(&markForDeleteAction, SIGNAL(triggered()), this, SLOT(markForDeletion()));
 }
+
 
 contentButton::~contentButton(){
     if(this->isMarked()){
@@ -81,6 +98,7 @@ void contentButton::setMarked(){
             this->setStyleMarked();
         }
         this->marked = true;
+        this->markForDeleteAction.setText(this->textForUnmarkDeletion);
     }
 }
 
@@ -93,6 +111,7 @@ void contentButton::unsetMarked(){
             this->setStyleDefault();
         }
         this->marked = false;
+        this->markForDeleteAction.setText(this->textForMarkDeletion);
     }
 }
 
@@ -176,7 +195,7 @@ void contentButton::keyPressEvent(QKeyEvent *event){
 
         Qt::KeyboardModifiers mod = event->modifiers();
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
-            this->switchMarking();
+            this->openMenu(this->mapToGlobal(this->rect().center()));
         }else{
             emit startContentButtonEdit(this->indexInGrid);
         }
@@ -210,12 +229,38 @@ void contentButton::mouseLeftClick(){
     QFocusEvent* focus = new QFocusEvent(QEvent::MouseButtonPress, Qt::MouseFocusReason);
     this->focusInEvent(focus);
     delete focus;
-
 }
 
 
-void contentButton::mouseRightClick(){
+
+void contentButton::handleTitleAdjust(){
+    qDebug() << "handleTitleAdjust";
+    //ToDo
+}
+
+void contentButton::markForDeletion(){
+    qDebug() << "markForDeletion";
     this->switchMarking();
+}
+
+void contentButton::openMenu(QPoint p){
+
+    qDebug() << "openMenu (x: "  << p.x() << ", y: " << p.y() << ")";
+
+    // if(!this->rightClickMenu.isVisible()){
+        // ToDo open Menu..
+        optionsMenu.popup(p);
+        // rightClickMenu.setFocus();
+    // }
+}
+
+
+void contentButton::mouseRightClick(QMouseEvent *event){
+    qDebug() << "start: mouseRightClick";
+
+    this->openMenu(event->globalPosition().toPoint());
+
+    qDebug() << "end: mouseRightClick";
 }
 
 // void contentButton::mousePressEvent(QMouseEvent *event){
@@ -227,7 +272,7 @@ void contentButton::mouseRightClick(){
 
 void contentButton::mousePressEvent(QMouseEvent *event){
 // void contentButton::mouseReleaseEvent(QMouseEvent *event){
-    qDebug() << "mouseReleaseEvent";
+    qDebug() << "mousePressEvent";
     // this->setFocus();
     // this->setFocus(Qt::TabFocusReason);
     this->setAsFocusedButton();
@@ -239,19 +284,20 @@ void contentButton::mousePressEvent(QMouseEvent *event){
     if(event->button() == Qt::LeftButton){
         this->mouseLeftClick();
     }else if(event->button() == Qt::RightButton){
-        this->mouseRightClick();
+        this->mouseRightClick(event);
     }
-    qDebug() << "/mouseReleaseEvent";
+    qDebug() << "/mousePressEvent";
 }
 
 // void contentButton::obtainFocus(){
 //     this->setFocus();
 // }
 
-//ToDo
+
+//ToDo currently does not seem to always trigger for right clicks (something to do with the focus logic, maybe race condition)
 void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
     //https://www.youtube.com/watch?v=Yg1FBrbfwNM
-    qDebug() << "Double click!";
+    qDebug() << "Double click!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
 
     //ToDo open edit
     // contentEdit *contEdit = new contentEdit();
@@ -287,7 +333,7 @@ void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
         // this->setAsSelectedButton();
         emit startContentButtonEdit(this->indexInGrid);
     }else if(event->button() == Qt::RightButton){
-        this->mouseRightClick();
+        this->mouseRightClick(event);
     }
 }
 
