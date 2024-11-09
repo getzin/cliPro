@@ -24,13 +24,17 @@ void dynAddRmButton::setStyleSheetAdd(){
     qDebug() << "  & setStyleSheetAdd";
 
     this->setStyleSheet("dynAddRmButton { color: green; border: 1px solid green; border-radius: 10%;"
-                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ecf5eb, stop:1 #e0f5df) }");
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ecf5eb, stop:1 #e0f5df) }"
+                        "dynAddRmButton:focus { color: green; border: 2px solid green; border-radius: 10%; outline: none;"
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #dee9dd, stop:1 #d0e4cf) }");
 }
 
 void dynAddRmButton::setStyleSheetRm(){
     qDebug() << "  & setStyleSheetRm";
     // this->setPalette(QPalette(QColor(200,200,200)));
-    this->setStyleSheet("dynAddRmButton { color: darkred; border: 2px solid red; border-radius: 10%;"
+    this->setStyleSheet("dynAddRmButton { color: darkred; border: 1px solid red; border-radius: 10%;"
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffb9a9, stop:1 #ff9d88) }"
+                        "dynAddRmButton:focus { color: darkred; border: 2px solid red; border-radius: 10%; outline: none;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffa490, stop:1 #ff8166) }");
 }
 
@@ -87,6 +91,12 @@ void dynAddRmButton::keyPressEvent(QKeyEvent *event){
         // }
 
         emit dynBtnEnterKey();
+    }else if(key == Qt::Key_Left || key == Qt::Key_Right
+            || key == Qt::Key_Up || key == Qt::Key_Down){
+
+        qDebug() << "EMIT!";
+        emit dynBtnArrowKey(key);
+
     }
     qDebug() << "/ Key press event! (dynAddRmButton)";
 }

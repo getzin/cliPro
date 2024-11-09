@@ -1,20 +1,20 @@
-#ifndef CONTENTEDIT_H
-#define CONTENTEDIT_H
+#ifndef BUTTONEDIT_H
+#define BUTTONEDIT_H
 
 #include <QDialog>
 #include "contentbutton.h"
 
 namespace Ui {
-class contentEdit;
+class buttonEdit;
 }
 
-class contentEdit : public QDialog
+class buttonEdit : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit contentEdit(QWidget *parent = nullptr);
-    ~contentEdit();
+    explicit buttonEdit(QWidget *parent = nullptr);
+    ~buttonEdit();
 
     // void showWithText(QString text);
     void editButton(contentButton* btn);
@@ -27,8 +27,8 @@ private slots:
     void handleSaveAndClose();
 
 private:
-    Ui::contentEdit *ui;
+    Ui::buttonEdit *ui;
     contentButton* currentlyEditing = nullptr;
 };
 
-#endif // CONTENTEDIT_H
+#endif // BUTTONEDIT_H

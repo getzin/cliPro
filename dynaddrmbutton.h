@@ -20,6 +20,7 @@ public:
 signals:
     void mainWindowButtonsNeedSwitch(dynAddRmButton::btnMode mode);
     void dynBtnEnterKey();
+    void dynBtnArrowKey(int key);
 
 public slots:
     void setMode(dynAddRmButton::btnMode mode = btnModeADD);
