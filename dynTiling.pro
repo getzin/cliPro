@@ -9,8 +9,8 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    buttonedit.cpp \
     contentbutton.cpp \
-    contentedit.cpp \
     dynaddrmbutton.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -18,9 +18,9 @@ SOURCES += \
     profilemenu.cpp
 
 HEADERS += \
+    buttonedit.h \
     contentbtncount.h \
     contentbutton.h \
-    contentedit.h \
     dynaddrmbutton.h \
     mainwindow.h \
     profiledialog.h \
@@ -28,7 +28,7 @@ HEADERS += \
     timedpopup.h
 
 FORMS += \
-    contentedit.ui \
+    buttonedit.ui \
     mainwindow.ui \
     profiledialog.ui \
     profilemenu.ui

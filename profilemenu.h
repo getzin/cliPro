@@ -67,10 +67,10 @@ private:
 
     static const QString appName;
     static const QString appAuthor;
+    static const QString settingsFile;
     static const QString settingsProfilesGroup;
     static const QString settingsProfilesListVal;
     static const QString settingsProfilesCurrSelID;
-    static const QString settingsFile;
 
     void initVisibleListFromInternal();
     void reconstructVisibleListFromInternal();

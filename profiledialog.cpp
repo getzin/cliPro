@@ -146,7 +146,8 @@ bool profileDialog::checkStringIsAlphanumeric(QString strToCheck){
         //(sadly there doesn't appear to exist a library utility function for this)
         for(int i = 0; i < strSize && stringIsValid == true; i++){
             qDebug() << "i :" << i;
-            if (!(strToCheck[i].isDigit() || strToCheck[i].isLetter())){
+            if (!(strToCheck[i].isDigit() || strToCheck[i].isLetter() ||
+                  strToCheck[i] == '_' || strToCheck[i] == '-')){
                 qDebug() << "Break! String is not valid";
                 stringIsValid = false;
                 break;
@@ -258,7 +259,7 @@ void profileDialog::processOK(){
                 }
             }else{
                 QString tmpErrorStr;
-                tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string.<br>Only alphanumeric characters are allowed.");
+                tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string.<br>Only alphanumeric characters, _ and - are allowed.");
                 timedPopUp(this, defaultPopUpTimer, tmpErrorStr);
                 qDebug() << "Input not OK";
             }

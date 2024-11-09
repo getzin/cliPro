@@ -11,10 +11,10 @@
 
 const QString profileMenu::appName = "cliProV1";
 const QString profileMenu::appAuthor = "Andreas Getzin";
+const QString profileMenu::settingsFile = "settings/cliProSettings.ini";
 const QString profileMenu::settingsProfilesGroup = "profiles";
 const QString profileMenu::settingsProfilesListVal = "profiles_list";
 const QString profileMenu::settingsProfilesCurrSelID = "current_profile_id";
-const QString profileMenu::settingsFile = "settings/cliProSettings.ini";
 
 profileMenu::profileMenu(QWidget *parent)
     : QDialog(parent)

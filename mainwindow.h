@@ -8,7 +8,7 @@
 #include "contentbutton.h"
 #include "dynaddrmbutton.h"
 #include "profilemenu.h"
-#include "contentedit.h"
+#include "buttonedit.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -39,18 +39,21 @@ protected:
 
 private slots:
     void processDynBtnAction();
-    void unmarkAllCntButtons();
+    void unmarkAllContentButtons();
     void profileButtonClicked();
     void updateButtonsForProfileChange(QString profileName);
     void createDefaultJsonForNewProfile(QString profileName);
-    void processKeyPress(int key, int indexOfSender);
-    void openContentEdit(int indexOfSender);
+    void processDynBtnArrowKeyPress(int key);
+    void processContentButtonKeyPress(int key, int indexOfSender);
+    void openButtonEdit(int indexOfSender);
     void adjustButtons(dynAddRmButton::btnMode mode);
     void processActionForAddButton();
     void processTextFieldChange(QString);
+    void processButtonDeletion(int indexOfSender);
 
 private:
     //methods
+    void fixTabOrder();
     void addDynBtnAtEndOfContentButtons();
     // dynAddRmButton* getOrCreateDynBtn();
     void processActionAdd(QString defaultText);
@@ -65,7 +68,6 @@ private:
     void rebuildGrid();
     void removeSelectedButton(int index);
     void processArrowKeyPress(int key, int indexOfSender);
-    void processDeleteKeyPress(int indexOfSender);
 
     // void setUpDynBtn();
     void setUpUnmarkAllBtn();
@@ -73,6 +75,11 @@ private:
     //variables & consts
     Ui::MainWindow *ui;
     static const int maxItemsPerRow = 4;
+    static const int minWindowSize_w = 500;
+    static const int minWindowSize_h = 200;
+    static const int defaultWindowSize_w = 800;
+    static const int defaultWindowSize_h = 400;
+
     //profileButton *profileBtn = nullptr;
     QVector<contentButton*> contentBtnList;
 
@@ -80,7 +87,7 @@ private:
     //                    QStandardPaths::HomeLocation) +
     //                "/qtProjects/dynTiling/buttons.json";
 
-    QString appName = "cliProV1";
+    // QString appName = "cliProV1";
     // QString appAuthor = "Andreas Getzin";
     // QString recentFilesGroup = "recentFiles";
     // QString recentFilesValPrefix = "file";
@@ -90,9 +97,16 @@ private:
     QPushButton *unmarkAllBtn = nullptr; //ToDo non-pointer
     dynAddRmButton *dynBtn = nullptr; //ToDo non-pointer
     profileMenu *profMenu = nullptr; //ToDo non-pointer
-    contentEdit *contEdit = nullptr; //ToDo non-pointer
+    buttonEdit *contEdit = nullptr; //ToDo non-pointer
     QString currSelectedProfileName;
     QString pathToFileForSelectedProfile;
+
+    static const QString appName;
+    static const QString appAuthor;
+    static const QString settingsFile;
+    static const QString settingsGeneralGroup;
+    static const QString settingsGeneralLastWindowWidth;
+    static const QString settingsGeneralLastWindowHeight;
 };
 
 #endif // MAINWINDOW_H

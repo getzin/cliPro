@@ -5,7 +5,18 @@
 #include <QMouseEvent>
 #include <QClipboard>
 #include <QMessageBox>
+#include <QPainter>
+#include <QTextDocument>
+#include <QInputDialog>
 
+
+
+const QString contentButton::textForNewTitleAct = "Add title";
+const QString contentButton::textForEditTitleAct = "Edit title";
+const QString contentButton::textForRemoveTitleAct = "Remove title";
+const QString contentButton::textForMarkDeletionAct = "Mark for deletion";
+const QString contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
+const QString contentButton::textForDeleteButton = "Delete button";
 
 int contentBtnCount::totalContentBtnCount = 0;
 int contentBtnCount::markedContentBtnCount = 0;
@@ -13,7 +24,13 @@ contentButton* contentButton::focusedButton = nullptr;
 
 // contentButton::contentButton(dynAddRmButton *dynBtnPtr){
 contentButton::contentButton(QWidget *parent)
-    : QPushButton(parent){
+    : QPushButton(parent),
+    newEditTitleAction(textForNewTitleAct, this),
+    removeTitleAction(textForRemoveTitleAct, this),
+    markForDeleteAction(textForMarkDeletionAct, this),
+    deleteButtonAction(textForDeleteButton, this)
+{
+    this->setMinimumSize(this->minButtonSize_w, this->minButtonSize_h);
     this->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
     this->setStyleDefault();
     // this->setFocusPolicy(Qt::ClickFocus); //disables tab focus
@@ -24,7 +41,23 @@ contentButton::contentButton(QWidget *parent)
     //                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fafacd, stop:1 #f7f7ba) }");
     // dynBtn = dynBtnPtr;
     this->indexInGrid = getTotalCnt() - 1; //-1 here, as the number is already increased (see ctor of contentbtncount.h)
+
+    //---MENU---
+    optionsMenu.addAction(&newEditTitleAction);
+    titleActionSeparator = optionsMenu.addSeparator();
+    titleActionSeparator->setVisible(false);
+    optionsMenu.addAction(&removeTitleAction);
+    removeTitleAction.setVisible(false);
+    optionsMenu.addSeparator();
+    optionsMenu.addAction(&markForDeleteAction);
+    optionsMenu.addSeparator();
+    optionsMenu.addAction(&deleteButtonAction);
+    connect(&newEditTitleAction, SIGNAL(triggered()), this, SLOT(titleAdjust()));
+    connect(&removeTitleAction, SIGNAL(triggered()), this, SLOT(removeTitle()));
+    connect(&markForDeleteAction, SIGNAL(triggered()), this, SLOT(markForDeletion()));
+    connect(&deleteButtonAction, SIGNAL(triggered()), this, SLOT(deleteThisButton()));
 }
+
 
 contentButton::~contentButton(){
     if(this->isMarked()){
@@ -82,6 +115,7 @@ void contentButton::setMarked(){
             this->setStyleMarked();
         }
         this->marked = true;
+        this->markForDeleteAction.setText(this->textForUnmarkDeletionAct);
     }
 }
 
@@ -94,6 +128,7 @@ void contentButton::unsetMarked(){
             this->setStyleDefault();
         }
         this->marked = false;
+        this->markForDeleteAction.setText(this->textForMarkDeletionAct);
     }
 }
 
@@ -151,6 +186,11 @@ void contentButton::unsetAsFocusedButton(){
     }
 }
 
+void contentButton::gainFocus(){
+    contentButton::clearFocusedButton();
+    this->setAsFocusedButton();
+}
+
 bool contentButton::notFocused(){
     return !(this->isFocused());
 }
@@ -177,23 +217,27 @@ void contentButton::keyPressEvent(QKeyEvent *event){
 
         Qt::KeyboardModifiers mod = event->modifiers();
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
-            this->switchMarking();
+            this->openMenu(this->mapToGlobal(this->rect().center()));
         }else{
             emit startContentButtonEdit(this->indexInGrid);
         }
     }
 
     if(key == Qt::Key_C){
-        QGuiApplication::clipboard()->setText(this->text());
+        // QGuiApplication::clipboard()->setText(this->text());
+        QGuiApplication::clipboard()->setText(this->content);
     }else if(key == Qt::Key_V){
 
         bool save = true;
-        if(this->text().length() > 0){
+        if(this->getContent().length() > 0){
+        // if(this->text().length() > 0){
 
             qDebug() << "There already is text!";
             QMessageBox::StandardButton reply;
 
-            reply = QMessageBox::question(this, "Override Confirmation", "Do you really want to override the existing content for this button?",
+            reply = QMessageBox::question(this, "Override Confirmation",
+                                          "Do you really want to override the existing content for this button?"
+                                          "<br><br><i>(WARNING: This is irreversible)</i>",
                                           QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
             if(reply == QMessageBox::Yes){
@@ -206,7 +250,9 @@ void contentButton::keyPressEvent(QKeyEvent *event){
         }
 
         if(save){
-            this->setText(QGuiApplication::clipboard()->text());
+            // this->setText(QGuiApplication::clipboard()->text());
+            this->setContent(QGuiApplication::clipboard()->text());
+            this->repaint();
         }
 
     }else if(key == Qt::Key_Left || key == Qt::Key_Right
@@ -233,12 +279,63 @@ void contentButton::mouseLeftClick(){
     QFocusEvent* focus = new QFocusEvent(QEvent::MouseButtonPress, Qt::MouseFocusReason);
     this->focusInEvent(focus);
     delete focus;
+}
 
+void contentButton::titleAdjust(){
+    qDebug() << "start: titleAdjust";
+    //ToDo
+    bool inputOK;
+
+    QString userInput;
+    if(this->hasTitle()){
+        userInput = QInputDialog::getText(this, "Edit title", "Change title to: ",
+                                                  QLineEdit::Normal, this->title, &inputOK);
+    }else{
+        userInput = QInputDialog::getText(this, "New title", "New title: ",
+                                                  QLineEdit::Normal, "", &inputOK);
+    }
+
+    if (inputOK){
+        qDebug() << "Input OK";
+        //ToDo
+        this->setTitle(userInput);
+    }
+
+    qDebug() << "/end: titleAdjust";
+}
+
+void contentButton::removeTitle(){
+    this->setTitle("");
+}
+
+void contentButton::markForDeletion(){
+    qDebug() << "markForDeletion";
+    this->switchMarking();
+}
+
+void contentButton::deleteThisButton(){
+    emit deleteButton(this->indexInGrid);
+}
+
+void contentButton::openMenu(QPoint p){
+
+    qDebug() << "openMenu (x: "  << p.x() << ", y: " << p.y() << ")";
+
+    // if(!this->rightClickMenu.isVisible()){
+        // ToDo open Menu..
+
+        optionsMenu.popup(p);
+        // rightClickMenu.setFocus();
+    // }
 }
 
 
-void contentButton::mouseRightClick(){
-    this->switchMarking();
+void contentButton::mouseRightClick(QMouseEvent *event){
+    qDebug() << "start: mouseRightClick";
+
+    this->openMenu(event->globalPosition().toPoint());
+
+    qDebug() << "end: mouseRightClick";
 }
 
 // void contentButton::mousePressEvent(QMouseEvent *event){
@@ -250,7 +347,7 @@ void contentButton::mouseRightClick(){
 
 void contentButton::mousePressEvent(QMouseEvent *event){
 // void contentButton::mouseReleaseEvent(QMouseEvent *event){
-    qDebug() << "mouseReleaseEvent";
+    qDebug() << "mousePressEvent";
     // this->setFocus();
     // this->setFocus(Qt::TabFocusReason);
     this->setAsFocusedButton();
@@ -262,55 +359,56 @@ void contentButton::mousePressEvent(QMouseEvent *event){
     if(event->button() == Qt::LeftButton){
         this->mouseLeftClick();
     }else if(event->button() == Qt::RightButton){
-        this->mouseRightClick();
+        this->mouseRightClick(event);
     }
-    qDebug() << "/mouseReleaseEvent";
+    qDebug() << "/mousePressEvent";
 }
 
 // void contentButton::obtainFocus(){
 //     this->setFocus();
 // }
 
-//ToDo
+
+//ToDo currently does not seem to always trigger for right clicks (something to do with the focus logic, maybe race condition)
 void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
     //https://www.youtube.com/watch?v=Yg1FBrbfwNM
-    qDebug() << "Double click!";
+    qDebug() << "Double click!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
 
     //ToDo open edit
-    // contentEdit *contEdit = new contentEdit();
+    // buttonEdit *btnEdit = new buttonEdit();
 
-    // contentEdit *contEdit = new contentEdit(this, this->text());
-    // contEdit->setModal(true);
+    // buttonEdit *btnEdit = new buttonEdit(this, this->text());
+    // btnEdit->setModal(true);
 
-    // contEdit->setWindowFlags(Qt::CustomizeWindowHint);
-    // contEdit->setWindowFlags(Qt::CustomizeWindowHint);
-    // contEdit->setWindowFlags(Qt::FramelessWindowHint);
-    // contEdit->setWindowFlags(Qt::CustomizeWindowHint);
-    // contEdit->setWindowFlags(Qt::WindowTitleHint);
-    // contEdit->
-    // contEdit->setStyleSheet("background-color: white; border: 1px solid silver; border-radius: 10%;");
+    // btnEdit->setWindowFlags(Qt::CustomizeWindowHint);
+    // btnEdit->setWindowFlags(Qt::CustomizeWindowHint);
+    // btnEdit->setWindowFlags(Qt::FramelessWindowHint);
+    // btnEdit->setWindowFlags(Qt::CustomizeWindowHint);
+    // btnEdit->setWindowFlags(Qt::WindowTitleHint);
+    // btnEdit->
+    // btnEdit->setStyleSheet("background-color: white; border: 1px solid silver; border-radius: 10%;");
 
-    // contEdit->setStyle(QPushButton::style());
+    // btnEdit->setStyle(QPushButton::style());
 
-    // contEdit->getCancelBtn()->setStyle(QPushButton::style());
-    // contEdit->getSaveBtn()->setStyle(QPushButton::style());
-
-
-
-    // contentEdit *contEdit = new contentEdit(this, this->text());
-    // contEdit->setModal(true);
-    // contEdit->show();
+    // btnEdit->getCancelBtn()->setStyle(QPushButton::style());
+    // btnEdit->getSaveBtn()->setStyle(QPushButton::style());
 
 
-    // delete contEdit;
 
-    // contEdit->setParent(this);
+    // buttonEdit *btnEdit = new buttonEdit(this, this->text());
+    // btnEdit->setModal(true);
+    // btnEdit->show();
+
+
+    // delete btnEdit;
+
+    // btnEdit->setParent(this);
 
     if(event->button() == Qt::LeftButton){
         // this->setAsSelectedButton();
         emit startContentButtonEdit(this->indexInGrid);
     }else if(event->button() == Qt::RightButton){
-        this->mouseRightClick();
+        this->mouseRightClick(event);
     }
 }
 
@@ -343,4 +441,238 @@ void contentButton::focusInEvent(QFocusEvent *event){
         || r == Qt::BacktabFocusReason || r == Qt::OtherFocusReason){
         this->setAsFocusedButton();
     }
+}
+
+QString contentButton::getTitle(){
+    return this->title;
+}
+
+QString contentButton::getContent(){
+    return this->content;
+}
+
+void contentButton::setTitle(QString title){
+    qDebug() << "start: setButtonTitle";
+
+    if(title.length() == 0){
+        this->title.clear();
+        this->newEditTitleAction.setText(textForNewTitleAct);
+        titleActionSeparator->setVisible(false);
+        removeTitleAction.setVisible(false);
+    }else{
+        this->title = title;
+        this->newEditTitleAction.setText(textForEditTitleAct);
+        titleActionSeparator->setVisible(true);
+        removeTitleAction.setVisible(true);
+    }
+
+    // QPaintEvent* ev = new QPaintEvent(this->rect());
+    // this->paintEvent(ev);
+    // this->repaint();
+
+    qDebug() << "end: setButtonTitle";
+}
+
+void contentButton::setContent(QString content){
+    qDebug() << "start: setButtonContent";
+    this->content = content;
+    // QPaintEvent* ev = new QPaintEvent(this->rect());
+    // this->paintEvent(ev);
+    // this->repaint();
+
+    //ToDo check this part.. maybe create "updateText" function?
+    //this->setText(this->buttonTitle);
+    qDebug() << "end: setButtonContent";
+}
+
+bool contentButton::hasTitle(){
+    return (this->title.length() > 0);
+}
+
+// bool contentButton::hasContent(){
+//     return (this->content.length() > 0);
+// }
+
+void contentButton::paintEvent(QPaintEvent *event){
+
+    // qDebug() << "    (start) PAINT EVENT";
+
+    QPushButton::paintEvent(event);
+
+    QPainter combinedImage(this);
+
+    // int cutAtPercent = 100;
+    // int totalPercent = 500;
+    // int dividingHeight = this->height()*cutAtPercent/totalPercent;
+
+
+    QTextDocument docTitle(this->title);
+    QTextOption optTitle(Qt::AlignHCenter);
+    docTitle.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
+    docTitle.setDefaultTextOption(optTitle);
+    docTitle.adjustSize();
+
+    if(docTitle.size().width() < this->width()){
+        docTitle.setTextWidth(this->width());
+
+        // qDebug() << "(adjusted!) docTitle.size().width(): " << docTitle.size().width();
+        // qDebug() << "(adjusted!) docTitle.size().height(): " << docTitle.size().height();
+    }
+
+    // int dividingHeight = qMin(this->height()/5, 30);
+    // int dividingHeight = docTitle.size().height();
+    // int remainingHeight = qMax(this->height() - dividingHeight, 30);
+
+    //ToDo check int vs. double
+    int dividingHeight = this->title.length() > 0 ? docTitle.size().height() : 0;
+    int remainingHeight = this->height() - dividingHeight;
+
+
+    // qDebug() << "this->width(): " << this->width();
+    // qDebug() << "this->height(): " << this->height();
+    // qDebug() << "---";
+
+    // qDebug() << "dividingHeight: " << dividingHeight;
+    // qDebug() << "remainingHeight: " << remainingHeight;
+    // qDebug() << "---";
+
+    QPoint pointTitle(0,0);
+    QSize sizeTitle(this->width() - 1, dividingHeight);
+    QRect rectTitle(pointTitle, sizeTitle);
+
+    // qDebug() << "docTitle.textWidth(): " << docTitle.textWidth(); //always "-1"
+    // qDebug() << "docTitle.size().width(): " << docTitle.size().width();
+    // qDebug() << "docTitle.size().height(): " << docTitle.size().height();
+
+    QPixmap pixmapTitle(docTitle.size().width(), docTitle.size().height());
+    pixmapTitle.fill(Qt::transparent);
+
+    // qDebug() << "pixmapTitle.width(): " << pixmapTitle.width();
+    // qDebug() << "pixmapTitle.height(): " << pixmapTitle.height();
+
+
+    QPainter paintTitle(&pixmapTitle);
+    paintTitle.setBrush(Qt::black);
+    // paintTitle.setFont(QFont("Times", 100, QFont::Medium));
+    docTitle.drawContents(&paintTitle, pixmapTitle.rect());
+    // QPixmap scaledPixmapTitle = pixmapTitle.scaledToWidth(this->rect().width(), Qt::SmoothTransformation);
+    // QPixmap scaledPixmapTitle = pixmapTitle.scaled(sizeTitle, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap scaledPixmapTitle(pixmapTitle);
+    /*
+     * problem: when setting the scaledPixmap as icon (see below), any text
+     *          that resides in the center of the pixmap will be what is visible,
+     *          but we want to see as much of the "left text" as possible
+     * solution: crop the pixmap to size rect, effectively throwing away anything
+     *           that doesn't fit into the rect (== that was overhanging on the right)
+     */
+    QPixmap croppedPixmapTitle = scaledPixmapTitle.copy(pixmapTitle.rect());
+
+    // combinedImage.setBrush(Qt::gray);
+    // combinedImage.drawRect(rectTitle);
+
+    combinedImage.drawPixmap(rectTitle,croppedPixmapTitle);
+
+    // qDebug() << "---";
+    //---------------------------------------------------------------------------------
+
+
+    QPoint pointContent(0, dividingHeight);
+    // QSize sizeContent(this->width() - 1, this->height() - dividingHeight - 1);
+    // QSize sizeContent(this->width() - 1, remainingHeight - 1); //ToDo check the "-1" of height
+    QSize sizeContent(this->width() - 1, remainingHeight); //ToDo check the "-1" of height
+    // QRect rectContent(pointContent, sizeContent);
+
+    QTextDocument docContent(this->content);
+    // QTextDocument docContent("OK this is just a test ignore what I say here have a nice day");
+    // QTextOption optContent(Qt::AlignHCenter);
+    // docContent.setDefaultTextOption(optContent);
+    docContent.setDefaultFont(QFont("Times", 12, QFont::Medium));
+    docTitle.adjustSize();
+
+    // qDebug() << "docContent.textWidth(): " << docContent.textWidth();
+    // qDebug() << "docContent.size().width(): " << docContent.size().width();
+    // qDebug() << "docContent.size().height(): " << docContent.size().height();
+
+    // docContent.setTextWidth(this->width()); //Forces Line Breaks.. ToDo maybe create toggle in right-click menu?
+    // docContent.setTextWidth(docContent.size().width());
+
+    // QTextDocument docContent;
+    // QString contentHtml = "<p style=\"text-align: center; white-space: pre-line\">" + readTxt + "</p>";
+    // docContent.setHtml(contentHtml);
+
+    // QTextDocument docContent(readTxt);
+    // docContent.setProperty()
+
+    // int heightForPixmap = qMax(remainingHeight, int(docContent.size().height()));
+    // QPixmap pixmapContent(docContent.size().width(), heightForPixmap);
+
+    QPixmap pixmapContent(docContent.size().width(), docContent.size().height());
+
+    pixmapContent.fill(Qt::transparent);
+    QPainter paintContent(&pixmapContent);
+    paintContent.setBrush(Qt::black);
+    // paintContent.setFont(QFont("Serif", 10, QFont::Medium));
+
+    // qDebug() << "pixmapContent.rect().width(): " << pixmapContent.rect().width();
+    // qDebug() << "pixmapContent.rect().height(): " << pixmapContent.rect().height();
+
+    docContent.drawContents(&paintContent, pixmapContent.rect());
+    // QPixmap scaledPixmapContent = pixmapContent.scaledToWidth(this->rect().width(), Qt::SmoothTransformation);
+
+    // qDebug() << "(2) remainingHeight: " << remainingHeight;
+
+    if(pixmapContent.rect().height() > remainingHeight){
+        // qDebug() << "   IF (pixmapContent.rect().height() > remainingHeight == true)";
+        QPixmap scaledPixmapContent = pixmapContent.scaledToHeight(remainingHeight, Qt::SmoothTransformation);
+
+        // QPixmap scaledPixmapContent = (pixmapContent.rect().height() > remainingHeight)
+        //                                   ? pixmapContent.scaledToHeight(remainingHeight, Qt::SmoothTransformation)
+        //                                   : pixmapContent;
+
+        // QPixmap scaledPixmapContent = pixmapContent.scaled(sizeContent, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        //see comment above, same applies now
+
+        // qDebug() << "scaledPixmapContent.width(): " << scaledPixmapContent.width();
+        // qDebug() << "scaledPixmapContent.height(): " << scaledPixmapContent.height();
+
+        // qDebug() << "---";
+
+        // qDebug() << "rectContent.x(): " << rectContent.x();
+        // qDebug() << "rectContent.y(): " << rectContent.y();
+        // qDebug() << "rectContent.width(): " << rectContent.width();
+        // qDebug() << "rectContent.height(): " << rectContent.height();
+
+        // QRect rectForContentCrop(rectContent);
+        // rectForContentCrop.setHeight(rectContent.height() + dividingHeight*2);
+
+        // qDebug() << "rectForContentCrop.x(): " << rectForContentCrop.x();
+        // qDebug() << "rectForContentCrop.y(): " << rectForContentCrop.y();
+        // qDebug() << "rectForContentCrop.width(): " << rectForContentCrop.width();
+        // qDebug() << "rectForContentCrop.height(): " << rectForContentCrop.height();
+
+        // QPixmap croppedPixmapContent = scaledPixmapContent.copy(rectForContentCrop);
+
+        //    inline QPixmap copy(int x, int y, int width, int height) const;
+
+        QRect rectForContentCrop(0, 0, this->width() - 1, remainingHeight);
+
+        QPixmap croppedPixmapContent = scaledPixmapContent.copy(rectForContentCrop);
+
+        // qDebug() << "---";
+
+        // qDebug() << "croppedPixmapTitle.width(): " << croppedPixmapTitle.width();
+        // qDebug() << "croppedPixmapTitle.height(): " << croppedPixmapTitle.height();
+
+        // qDebug() << "croppedPixmapContent.width(): " << croppedPixmapContent.width();
+        // qDebug() << "croppedPixmapContent.height(): " << croppedPixmapContent.height();
+
+        combinedImage.drawPixmap(pointContent, croppedPixmapContent);
+    }else{
+        // qDebug() << "   ELSE (pixmapContent.rect().height() <= remainingHeight)";
+        QRect rectForUnscaledUncropped(0, dividingHeight, pixmapContent.rect().width(), pixmapContent.rect().height());
+
+        combinedImage.drawPixmap(rectForUnscaledUncropped, pixmapContent);
+    }
+
+    // qDebug() << "    (/end) PAINT EVENT";
 }
