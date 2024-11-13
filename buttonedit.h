@@ -15,14 +15,10 @@ class buttonEdit : public QDialog
 public:
     explicit buttonEdit(QWidget *parent = nullptr);
     ~buttonEdit();
-
-    // void showWithText(QString text);
     void editButton(contentButton* btn);
-    // QPushButton* getCancelBtn();
-    // QPushButton* getSaveBtn();
 
 private slots:
-    void handleSave(bool closeAtEnd);
+    void save(bool closeAtEnd);
     void handleSaveOnly();
     void handleSaveAndClose();
 

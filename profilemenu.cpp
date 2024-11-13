@@ -12,54 +12,40 @@
 const QString profileMenu::appName = "cliProV1";
 const QString profileMenu::appAuthor = "Andreas Getzin";
 const QString profileMenu::settingsFile = "settings/cliProSettings.ini";
-const QString profileMenu::settingsProfilesGroup = "profiles";
-const QString profileMenu::settingsProfilesListVal = "profiles_list";
-const QString profileMenu::settingsProfilesCurrSelID = "current_profile_id";
+const QString profileMenu::settingsGroupProfiles = "profiles";
+const QString profileMenu::settingsValProfilesList = "profiles_list";
+const QString profileMenu::settingsValCurrProfileID = "current_profile_id";
 
 profileMenu::profileMenu(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::profileMenu)
 {
-    qDebug() << "YYYYY begin: profileMenu cTor";
+    qDebug() << "start: profileMenu cTor";
 
     this->ui->setupUi(this);
-
+    this->ui->visibleProfileList->setSortingEnabled(true);
     this->setWindowTitle("Pick a profile");
 
-    // QStringList* profileList = getProfiles();
-
-    this->loadProfiles(); //needs to happen before init of list
-    this->initVisibleListFromInternal();
-    this->ui->visibleProfileList->setSortingEnabled(true);
-
+    this->loadProfiles(); //needs to happen before construction of visibleProfileList
+    this->constructVisibleListFromInternal();
+    this->dialog.setPtrToVisibleProfileList(this->ui->visibleProfileList);
     qDebug() << "Profiles List is set";
 
-    for(int i = 0; i < this->internalProfilesList.length(); i++){
-
+    for(qsizetype i = 0; i < this->internalProfilesList.length(); ++i){
         qDebug() << "profilesList.at(" << i << ") : " << internalProfilesList.at(i);
     }
 
-    //profilesList = this->loadProfiles();
+    connect(this->ui->btnNew, SIGNAL(clicked()), &(this->dialog), SLOT(startNewProfileCreation())); //new button
+    connect(this->ui->btnEdit, SIGNAL(clicked()), &(this->dialog), SLOT(startEditOfProfileName())); //edit button
+    connect(this->ui->btnDelete, SIGNAL(clicked()), this, SLOT(deleteButtonPressed())); //delete button
+    connect(this->ui->btnCancel, SIGNAL(clicked()), this, SLOT(cancelButtonPressed())); //cancel button
+    connect(this->ui->btnSave, SIGNAL(clicked()), this, SLOT(saveButtonPressed())); //save button
 
-    // for(int i = 0; i < this->internalProfilesList->length(); i++){
-    //     // QLineEdit* profile = new QLineEdit(profileList->at(i));
-    //     // ui->scrollArea->setWidget(profile, Qt::AlignTop);
+    //callback from dialog, after new profile // editing of existing profile name
+    connect(&(this->dialog), SIGNAL(profileNameEdited(QString,QString)), this, SLOT(handleProfileNameEdited(QString,QString)));
+    connect(&(this->dialog), SIGNAL(createNewProfile(QString)), this, SLOT(handleNewProfileCreation(QString)));
 
-    //     this->ui->visibleProfileList->insertItem(i, this->internalProfilesList->at(i));
-    // }
-
-    // connect(ui->btnNew, SIGNAL(clicked()), this, SLOT(newButtonPressed())); //new button
-    // connect(ui->btnEdit, SIGNAL(clicked()), this, SLOT(editButtonPressed())); //edit button
-    connect(ui->btnNew, SIGNAL(clicked()), &dialog, SLOT(newProfile())); //new button
-    connect(ui->btnEdit, SIGNAL(clicked()), &dialog, SLOT(editProfile())); //edit button
-    connect(ui->btnDelete, SIGNAL(clicked()), this, SLOT(deleteButtonPressed())); //delete button
-    connect(ui->btnCancel, SIGNAL(clicked()), this, SLOT(cancelButtonPressed())); //cancel button
-    connect(ui->btnSave, SIGNAL(clicked()), this, SLOT(saveButtonPressed())); //save button
-
-    connect(&dialog, SIGNAL(editName(QString,QString)), this, SLOT(addEditNameActionToUnsavedActions(QString,QString)));
-    connect(&dialog, SIGNAL(newName(QString)), this, SLOT(addNewNameActionToUnsavedActions(QString)));
-
-    connect(ui->visibleProfileList, SIGNAL(itemSelectionChanged()), this, SLOT(handleSelectionChange()));
+    connect(this->ui->visibleProfileList, SIGNAL(itemSelectionChanged()), this, SLOT(handleSelectedProfileChanged()));
 
     // if(ui->visibleProfileList->selectedItems().length() == 0){
     //     ui->btnEdit->setDisabled(true);
@@ -68,266 +54,163 @@ profileMenu::profileMenu(QWidget *parent)
     // }
     // this->setEditDelSaveDisabled();
 
-    qDebug() << "YYYYY end: profileMenu cTor";
-
-
     //ToDo logic for "last used profile" should go here
 
-    dialog.setPtrToListWidget(this->ui->visibleProfileList);
-
+    qDebug() << "end: profileMenu cTor";
 }
 
 profileMenu::~profileMenu()
 {
     qDebug() << "begin: profileMenu dTor";
-    delete ui;
+    delete this->ui;
     qDebug() << "end: profileMenu dTor";
 }
 
-// QStringList* profileMenu::getProfiles(){
-//     QStringList* profileList = new QStringList;
-
-//     //for now
-//     profileList->emplace_back("Work");
-//     profileList->emplace_back("Language");
-//     profileList->emplace_back("Youtube");
-
-//     return profileList;
-// }
-
-void profileMenu::initVisibleListFromInternal(){
+void profileMenu::constructVisibleListFromInternal(){
     qDebug() << "Start : initVisibleListFromInternal";
-    for(int i = 0; i < internalProfilesList.length(); i++){
+
+    this->ui->visibleProfileList->clear();
+    for(qsizetype i = 0; i < internalProfilesList.length(); ++i){
         qDebug() << "i: " << i << " ; value: " << this->internalProfilesList.at(i);
         this->ui->visibleProfileList->insertItem(i, this->internalProfilesList.at(i));
     }
-
     qDebug() << "Size of visibleProfileList: " << this->ui->visibleProfileList->count();
 
     //check that the currSelectedProfileID lies within our now inited profiles list
     if((this->lastSavedSelProfileID >= 0)
         && (this->lastSavedSelProfileID < this->ui->visibleProfileList->count())){
-        qDebug() << "ID (" << lastSavedSelProfileID << ") lies in in-bounds. Set it!";
+        qDebug() << "ID (" << this->lastSavedSelProfileID << ") lies in in-bounds. Set it!";
         this->ui->visibleProfileList->setCurrentRow(this->lastSavedSelProfileID);
     }else{
-        qDebug() << "ID (" << lastSavedSelProfileID << ") lies out of bounds... init as -1 instead.";
+        qDebug() << "ID (" << this->lastSavedSelProfileID << ") lies out of bounds... init as -1 instead.";
         this->ui->visibleProfileList->setCurrentRow(-1);
     }
-    qDebug() << "End : /initVisibleListFromInternal";
-}
-
-void profileMenu::reconstructVisibleListFromInternal(){
-    qDebug() << "Start : reconstructVisibleListFromInternal";
-    ui->visibleProfileList->clear();
-    initVisibleListFromInternal();
-    qDebug() << "End : /reconstructVisibleListFromInternal";
+    qDebug() << "End : initVisibleListFromInternal";
 }
 
 void profileMenu::saveVisibleListToInternal(){
     qDebug() << "Start : saveVisibleListToInternal";
 
     this->internalProfilesList.clear();
-    for(int i = 0; i < this->ui->visibleProfileList->count(); i++){
+    for(qsizetype i = 0; i < this->ui->visibleProfileList->count(); ++i){
         qDebug() << "i: " << i << " ; value: " << this->ui->visibleProfileList->item(i)->text();
-        // this->ui->visibleProfileList->insertItem(i, this->internalProfilesList->at(i));
         this->internalProfilesList.emplace_back(this->ui->visibleProfileList->item(i)->text());
     }
 
-
-    // if((this->currSelectedProfileID >= 0)
-    //     && (this->currSelectedProfileID < this->ui->visibleProfileList->count())){
-    //     qDebug() << "ID (" << currSelectedProfileID << ") lies in in-bounds. Set it!";
-    //     this->ui->visibleProfileList->setCurrentRow(this->currSelectedProfileID);
-    // }else{
-    //     qDebug() << "ID (" << currSelectedProfileID << ") lies out of bounds... init as -1 instead.";
-    //     this->ui->visibleProfileList->setCurrentRow(-1);
-    // }
-
-    int visibleProfileCnt = this->ui->visibleProfileList->count();
-    int currSelRow = this->ui->visibleProfileList->currentRow();
-    if((visibleProfileCnt >= 0)
-        && (currSelRow < visibleProfileCnt)){
-        qDebug() << " id (" << currSelRow << ") lies in in-bounds. Set it!";
-        this->lastSavedSelProfileID = currSelRow;
+    bool indexOK = false;
+    qsizetype visibleProfileCnt = this->ui->visibleProfileList->count();
+    if(visibleProfileCnt >= 0){
+        if(!(this->ui->visibleProfileList->selectedItems().empty())){
+            qsizetype currSelRow = this->ui->visibleProfileList->currentRow();
+            if(currSelRow >= 0 && currSelRow < visibleProfileCnt){
+                indexOK = true;
+                qDebug() << "id (" << currSelRow << ") lies in in-bounds. Set lastSavedSelProfileID to: " << currSelRow;
+                this->lastSavedSelProfileID = currSelRow;
+            }else{
+                qDebug() << "id (" << currSelRow << ") lies out of bounds (bad)";
+            }
+        }else{
+            qDebug() << "No profile is currently selected (bad)";
+        }
     }else{
-        qDebug() << " id (" << currSelRow << ") lies out of bounds... set as -1 instead.";
+        qDebug() << "visibleProfileCnt is less than 0 (bad)";
+    }
+    if(!indexOK){
+        qDebug() << "Set lastSavedSelProfileID as -1 instead.";
         this->lastSavedSelProfileID = -1;
     }
-
-    qDebug() << "End : /saveVisibleListToInternal";
+    qDebug() << "End : saveVisibleListToInternal";
 }
 
 void profileMenu::loadProfiles(){
-    qDebug() << "Start: Loading profiles";
-    QSettings settings(settingsFile, QSettings::IniFormat);
+    qDebug() << "start: Loading profiles";
+    QSettings settings(this->settingsFile, QSettings::IniFormat);
 
-    if(!internalProfilesList.empty()){
-        internalProfilesList.clear();
+    if(!this->internalProfilesList.empty()){
+        this->internalProfilesList.clear();
     }
 
-    settings.beginGroup(settingsProfilesGroup);
+    settings.beginGroup(this->settingsGroupProfiles);
+    this->internalProfilesList.append(settings.value(this->settingsValProfilesList).toStringList()); //read "profiles" (list of string)
 
-    //read "profiles" (list of string)
-    internalProfilesList.append(settings.value(settingsProfilesListVal).toStringList());
+    QString tmpCurrSelIdVal = settings.value(this->settingsValCurrProfileID).toString();
 
-    // qDebug() << "Size: " << internalProfilesList.size();
-
-    QString tmpCurrSelIdVal = settings.value(settingsProfilesCurrSelID).toString();
     bool isOK = false;
-    int tmpCurrSelIndex = tmpCurrSelIdVal.toInt(&isOK);
+    qsizetype tmpCurrSelIndex = tmpCurrSelIdVal.toInt(&isOK);
 
-    qDebug() << "read ID: " << tmpCurrSelIdVal << " ; profiles list size: " << internalProfilesList.size();
+    qDebug() << "read ID: " << tmpCurrSelIdVal << " ; profiles list size: " << this->internalProfilesList.size();
+    qDebug() << "currSelectedProfileID before: " << this->lastSavedSelProfileID;
 
-    qDebug() << "currSelectedProfileID before: " << lastSavedSelProfileID;
-
-    //make sure the index is valid
+    //make sure the index is valid //ToDo combine cases?
     if(isOK){
-        if(tmpCurrSelIndex < internalProfilesList.size()){
+        if(tmpCurrSelIndex < this->internalProfilesList.size()){
             qDebug() << "index is valid";
-            lastSavedSelProfileID = tmpCurrSelIndex;
-            ui->visibleProfileList->setCurrentRow(tmpCurrSelIndex);
+            this->lastSavedSelProfileID = tmpCurrSelIndex;
+            this->ui->visibleProfileList->setCurrentRow(tmpCurrSelIndex);
         }else{
             qDebug() << "index out of range";
-            lastSavedSelProfileID = -1; //index was invalid
+            this->lastSavedSelProfileID = -1; //index was invalid
         }
     }else{
         qDebug() << "index not valid";
-        lastSavedSelProfileID = -1; //index was invalid
+        this->lastSavedSelProfileID = -1; //index was invalid
     }
 
-    qDebug() << "currSelectedProfileID after: " << lastSavedSelProfileID;
-
+    qDebug() << "currSelectedProfileID after: " << this->lastSavedSelProfileID;
     settings.endGroup();
 
-    for(int i = 0; i < internalProfilesList.count(); i++){
-        qDebug() << "i: " << i << " ; value: " << internalProfilesList.at(i);
+    for(qsizetype i = 0; i < this->internalProfilesList.count(); ++i){
+        qDebug() << "i: " << i << " ; value: " << this->internalProfilesList.at(i);
     }
-
-    qDebug() << "End: Loading profiles";
+    qDebug() << "end: Loading profiles";
 }
 
 void profileMenu::saveProfiles(){
-    qDebug() << "Start: Saving profiles";
-    QSettings settings(settingsFile, QSettings::IniFormat);
+    qDebug() << "start: Saving profiles";
+    QSettings settings(this->settingsFile, QSettings::IniFormat);
 
-    settings.beginGroup(settingsProfilesGroup);
-    settings.setValue(settingsProfilesListVal, this->internalProfilesList);
-    int tmpListSize = internalProfilesList.size();
+    settings.beginGroup(this->settingsGroupProfiles);
+    settings.setValue(this->settingsValProfilesList, this->internalProfilesList);
+
+    bool indexOK = false;
+    qsizetype tmpListSize = this->internalProfilesList.size();
     if(tmpListSize > 1){
         qDebug() << "1 or more profiles exist! (good)";
-        if(ui->visibleProfileList->selectedItems().size() == 1){
+        if(this->ui->visibleProfileList->selectedItems().size() == 1){
 
-            int tmpValForCurrSelID = ui->visibleProfileList->currentRow();
-
+            qsizetype tmpValForCurrSelID = this->ui->visibleProfileList->currentRow();
             qDebug() << "tmpValForCurrSelID: " << tmpValForCurrSelID;
 
             //check that index is in bounds
             if(tmpValForCurrSelID >= 0 && tmpValForCurrSelID < tmpListSize){
-                qDebug() << "index is in-bounds, great!";
-                settings.setValue(settingsProfilesCurrSelID, QString::number(tmpValForCurrSelID));
+                indexOK = true;
+                qDebug() << "index is in-bounds, good!";
+                settings.setValue(this->settingsValCurrProfileID, QString::number(tmpValForCurrSelID));
             }else{
-                qDebug() << "index is out of bounds.. bad.";
-                settings.setValue(settingsProfilesCurrSelID,  QString::number(-1));
+                qDebug() << "index is out of bounds, bad.";
             }
         }else{
-            qDebug() << "Index is invalid...";
-            settings.setValue(settingsProfilesCurrSelID,  QString::number(-1));
+            qDebug() << "Index is invalid, bad.";
         }
     }else{
-        qDebug() << "no profiles exist?";
-        settings.setValue(settingsProfilesCurrSelID,  QString::number(-1));
+        qDebug() << "no profiles exist, probably bad.";
     }
+
+    if(!indexOK){
+        settings.setValue(this->settingsValCurrProfileID,  QString::number(-1));
+    }
+
     settings.endGroup();
-    qDebug() << "End: Saving profiles";
+    qDebug() << "end: Saving profiles";
 }
-
-// void profileMenu::newButtonPressed(){
-//     qDebug("Profiles: New Button pressed");
-
-//     // QInputDialog nameEntry;
-//     // nameEntry.setVisible(true);
-//     // nameEntry.show();
-
-//     // bool isOK;
-//     // QString newProfileName = QInputDialog::getText(this, tr("New profile"),
-//     //                                      tr("Name (letters/numbers only):"), QLineEdit::Normal,
-//     //                                      "", &isOK);
-
-//     // if(isOK && !newProfileName.isEmpty()
-//     //         && checkStringIsAlphanumeric(newProfileName)){
-//     //     qDebug() << "Input OK";
-//     //     ui->visibleProfileList->addItem(newProfileName);
-//     // }else{
-//     //     qDebug() << "Input not OK";
-//     // }
-
-//     //
-//     //ToDo make it permanent... need to update the QSettings thing... maybe emit a signal?
-//     //
-
-//     //=====previous working code=====
-//     // getUserInputAndCheck(false, tr("New profile"), tr("Name (letters/numbers only):"), "");
-
-//     dialog.newProfile();
-// }
-
-// void profileMenu::editButtonPressed(){
-//     qDebug("Profiles: Edit Button pressed");
-
-//     //we can only select 1 item, but it also has to be selected
-//     // if(ui->visibleProfileList->selectedItems().size() == 1){
-//         // QString currentItemTxt = ui->visibleProfileList->selectedItems().at(0)->text();
-
-//         // bool isOK;
-//         // QString editedProfileName = QInputDialog::getText(this, tr("Edit profile name"),
-//         //                                      tr("Change name to:"), QLineEdit::Normal,
-//         //                                      currentItemTxt, &isOK);
-//         // if (isOK && !editedProfileName.isEmpty()
-//         //          && checkStringIsAlphanumeric(editedProfileName)){
-//         //     qDebug() << "Input OK";
-//         //     ui->visibleProfileList->selectedItems().at(0)->setText(editedProfileName);
-//         // }else{
-//         //     QString tmpErrorStr;
-//         //     tmpErrorStr.append("ERROR: <b>").append(editedProfileName).append("</b> is not a valid string");
-//         //     this->timedPopUp(this->defaultTimer, tmpErrorStr);
-//         //     qDebug() << "Input not OK";
-//         // }
-
-
-//         //=====previous working code=====
-//         // getUserInputAndCheck(true, tr("Edit profile name"), tr("Change name to:"), currentItemTxt);
-
-
-//         // if(!currentItemTxt.isEmpty()){
-//             // dialog.editProfile(ui->visibleProfileList, ui->visibleProfileList->currentRow(), currentItemTxt);
-//         // }else{
-//         //     qDebug() << "Error: currentItemTxt is empty!"; //error
-//         // }
-
-//     //     dialog.editProfile();
-
-//     // }else{
-//     //     timedPopUp(defaultPopUpTimer, "No profile selected.");
-//     // }
-
-//     //TRY TO DO INLINE EDITING... DIDN'T WORK...
-//     // int currRow = ui->visibleProfileList->currentRow();
-//     // qDebug() << "currRow: " << currRow;
-//     // QListWidgetItem* currItem = ui->visibleProfileList->item(currRow);
-//     // ui->visibleProfileList->editItem(currItem);
-
-//     dialog.editProfile();
-// }
 
 void profileMenu::deleteButtonPressed(){
     qDebug("Profiles: Delete Button pressed");
-    QMessageBox::StandardButton reply;
 
     QMessageBox messageBox;
     messageBox.setTextFormat(Qt::RichText);
 
     QString confirmationText;
-
     confirmationText.append("Do you really want to delete profile <b>");
 
     QList<QListWidgetItem*> allSelectedItems = ui->visibleProfileList->selectedItems();
@@ -339,42 +222,38 @@ void profileMenu::deleteButtonPressed(){
         qDebug() << "No item selected..";
         confirmationText.append("ERROR");
     }else{
-        QString textOfselectedItem = ui->visibleProfileList->selectedItems().at(0)->text();
+        QString textOfselectedItem = this->ui->visibleProfileList->selectedItems().at(0)->text();
         qDebug() << "Item selected: " << textOfselectedItem;
         confirmationText.append(textOfselectedItem);
     }
 
     confirmationText.append("</b> with all its clips? <br><br><i>(WARNING: This is irreversible)</i>");
 
-    reply = messageBox.question(this, "Delete Confirmation", confirmationText,
+    QMessageBox::StandardButton reply = messageBox.question(this, "Delete Confirmation", confirmationText,
                                 QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
     if(reply == QMessageBox::Yes){
-        int currRow = ui->visibleProfileList->currentRow();
-        QListWidgetItem* itemToDelete = ui->visibleProfileList->takeItem(currRow);
+        int currRow = this->ui->visibleProfileList->currentRow();
 
-        QString delName = itemToDelete->text();
-        profAction act{delName, ""};
-        //profActions* act = new profActions(delName, "");
-        this->unsavedActions.append(act);
-        delete itemToDelete;
-
-        ui->visibleProfileList->setCurrentRow(-1);
-
-        // ui->visibleProfileList->sort
-
+        if(currRow >= 0){
+            QListWidgetItem* itemToDelete = this->ui->visibleProfileList->takeItem(currRow);
+            QString delName = itemToDelete->text();
+            this->unsavedActions.append(profAction{delName, ""});
+            delete itemToDelete;
+            this->ui->visibleProfileList->setCurrentRow(-1); //makes it so that no profile is selected
+        }else{
+            ; //do nothing?
+        }
     }else{
         ; //do nothing?
     }
-
     //ToDo check case where ALL PROFILES get deleted!! (what happens? what SHOULD happen?)
 }
 
 void profileMenu::cancelButtonPressed(){
     qDebug("Profiles: Cancel Button pressed");
-
-    this->reconstructVisibleListFromInternal();
-    unsavedActions.clear();
+    this->constructVisibleListFromInternal();
+    this->unsavedActions.clear();
     this->close();
 }
 
@@ -383,73 +262,55 @@ QString profileMenu::constructFilePathForProfileJson(QString profileName){
 }
 
 void profileMenu::renameProfilesJson(QString oldName, QString newName){
-    qDebug() << "-- renameProfilesJson. input: " << oldName << ", " << newName;
-    QString oldNamePath = constructFilePathForProfileJson(oldName);
-    QString newNamePath = constructFilePathForProfileJson(newName);
-    qDebug() << "-- renameProfilesJson. paths: " << oldNamePath << ", " << newNamePath;
+    qDebug() << "renameProfilesJson. input: " << oldName << ", " << newName;
+    QString oldNamePath = this->constructFilePathForProfileJson(oldName);
+    QString newNamePath = this->constructFilePathForProfileJson(newName);
+    qDebug() << "renameProfilesJson. paths: " << oldNamePath << ", " << newNamePath;
     bool renameSuccess = QFile::rename(oldNamePath, newNamePath);
     //ToDo what if fails?
     qDebug() << "renameSuccess: " << renameSuccess;
 }
 
 void profileMenu::createNewProfilesJson(QString name){
-    qDebug() << "-- createNewProfilesJson. input: " << name;
+    qDebug() << "createNewProfilesJson. input: " << name;
     //QString namePath = constructFilePathForProfileJson(name);
     ; //ToDo create some kind of default json
     emit this->newProfileCreated(name);
 }
 
 void profileMenu::deleteProfilesJson(QString name){
-    qDebug() << "-- deleteProfilesJson. input: " << name;
+    qDebug() << "deleteProfilesJson. input: " << name;
     QString namePath = constructFilePathForProfileJson(name);
-    qDebug() << "-- deleteProfilesJson. path: " << namePath;
+    qDebug() << "deleteProfilesJson. path: " << namePath;
     bool deleteSuccess = QFile::remove(namePath);
     qDebug() << "deleteSuccess: " << deleteSuccess;
 }
 
 void profileMenu::processProfilesActions(){
-    // for(int i = 0; i < unsavedActions.count(); i++){
+    //       delName + newName
+    // edit:  "____" + "____"
+    // new:     ""   + "____"
+    // del:   "____" +   ""
 
-    // }
-
-
-    // delName | newName
-
-
-    // edit:
-    // "___" + "___"
-
-    // new:
-    // "" + "___"
-
-    // del:
-    // "___" + ""
-
-    qDebug() << "     ### handleProfileFilesForSaveAction";
-
-    while(!unsavedActions.empty()){
-
+    qDebug() << "start: processProfilesActions";
+    while(!(this->unsavedActions.empty())){
         profAction act = unsavedActions.takeFirst();
-
-        qDebug() << "-- act. input: " << act.delName << ", " << act.newName;
-
+        qDebug() << "input: " << act.delName << ", " << act.newName;
         if(!act.delName.isEmpty() && !act.newName.isEmpty()){
-            renameProfilesJson(act.delName, act.newName);
+            this->renameProfilesJson(act.delName, act.newName);
         }else if(act.delName.isEmpty() && !act.newName.isEmpty()){
-            createNewProfilesJson(act.newName);
+            this->createNewProfilesJson(act.newName);
         }else if(!act.delName.isEmpty() && act.newName.isEmpty()){
-            deleteProfilesJson(act.delName);
+            this->deleteProfilesJson(act.delName);
         }else{
-            qDebug() << "Error. Both strings for action are empty.";
+            qDebug() << "Error. Both strings for action are empty. Do nothing.";
         }
-
     }
-
-    qDebug() << "     /### handleProfileFilesForSaveAction";
+    qDebug() << "end: processProfilesActions";
 }
 
 void profileMenu::saveButtonPressed(){
-    qDebug() << "\n\n\n       Profiles: SAAAAAAAAAAAAAVEEEEEEE";
+    qDebug() << "start: saveButtonPressed";
 
     //do not allow saving when no profile has been selected?
     //(or just make it so that you can't add/delete items without having a profile?)
@@ -463,7 +324,7 @@ void profileMenu::saveButtonPressed(){
         // 2) create new default JSON files for all new profiles
         // 3) rename files to new names
         this->processProfilesActions();
-        close();
+        this->close();
     }else{
         timedPopUp(this, 3000, "<p align='center'>Please<br><b>select a profile</b><br>to continue.</p>");
         qDebug() << "no profile selected!";
@@ -472,148 +333,24 @@ void profileMenu::saveButtonPressed(){
     //emit signal with new profile name?
     qDebug() << "lastSavedSelProfileID: " << lastSavedSelProfileID;
     if(this->lastSavedSelProfileID >= 0 && lastSavedSelProfileID < this->internalProfilesList.count()){
-        qDebug() << "! emit !";
         emit this->selProfileHasChanged(this->internalProfilesList.at(this->lastSavedSelProfileID));
-        qDebug() << "! /emit !";
     }else{
         qDebug() << "lastSavedSelProfileID was invalid";
         emit this->selProfileHasChanged("");
     }
 }
 
-// //static
-// bool profileMenu::checkStringIsAlphanumeric(QString strToCheck){
-//     bool stringIsValid = true;
-//     int strSize = strToCheck.size();
-//     qDebug() << "Str Size: " << strSize;
-//     if(strSize > 0){
-//         //check each character individually
-//         //(sadly there doesn't appear to exist a library utility function for this)
-//         for(int i = 0; i < strSize && stringIsValid == true; i++){
-//             qDebug() << "i :" << i;
-//             if (!(strToCheck[i].isDigit() || strToCheck[i].isLetter())){
-//                 qDebug() << "Break! String is not valid";
-//                 stringIsValid = false;
-//                 break;
-//             }
-//         }
-//     }else{
-//         stringIsValid = false;
-//     }
-
-//     qDebug() << "stringIsValid: " << stringIsValid;
-//     return stringIsValid;
-// }
-
-// bool profileMenu::nameCanBeUsed(bool isEditOperation, QString userInput){
-
-//     qDebug() << "start: checkForDuplicate";
-
-//     qDebug() << "isEditOperation: " << isEditOperation;
-
-//     for(int i = 0; i < ui->visibleProfileList->count(); i++){
-//         if(userInput == ui->visibleProfileList->item(i)->text()){
-
-//             qDebug() << "Same text!";
-//             //if we are editing an existing name, and it hasn't change
-//             //  then that is not a duplicate & we will accept the input
-
-//             qDebug() << "i: " << i;
-//             qDebug() << "ui->visibleProfileList->currentRow(): " << ui->visibleProfileList->currentRow();
-
-//             if(isEditOperation && (ui->visibleProfileList->currentRow() == i)){
-//                 qDebug() << "Profile name edit -- Text has not changed!";
-//                 return true;
-//             }else{
-//                 qDebug() << "Profile name edit -- Text is a duplicate!";
-//                 return false;
-//             }
-//         }
-//     }
-
-//     qDebug() << "end: checkForDuplicate (none found)";
-
-//     return true;
-// }
-
-// void profileMenu::addEditNameActionToUnsavedActions(QString userInput){
-//     //if(1){} //maybe add additional check for correctness of index before editing?
-//     QString oldName = ui->visibleProfileList->selectedItems().at(0)->text();
-//     ui->visibleProfileList->selectedItems().at(0)->setText(userInput);
-
-//     qDebug() << "   ## (edit) oldName: " << oldName << ", userInput: " << userInput;
-
-//     profAction act{oldName, userInput};
-//     this->unsavedActions.append(act);
-// }
-
-// void profileMenu::addNewNameActionToUnsavedActions(QString userInput){
-//     ui->visibleProfileList->addItem(userInput);
-
-//     qDebug() << "   ## (new) userInput: " << userInput;
-
-//     profAction act{"", userInput};
-//     this->unsavedActions.append(act);
-// }
-
-// //isEditOperation == false --> is "new" operation (new item added to list)
-// bool profileMenu::getUserInputAndCheck(bool isEditOperation, QString windowName, QString promptText, QString defaultTxtForInput){
-//     bool inputOK;
-//     QString userInput = QInputDialog::getText(this, windowName, promptText,
-//                                               QLineEdit::Normal, defaultTxtForInput, &inputOK);
-//     bool stringValid = false;
-//     if (inputOK){
-//         if((!userInput.isEmpty())){
-
-//             if(checkStringIsAlphanumeric(userInput)){
-//                 //check for possible duplicate (not allowed) before adding the new string
-//                 if(this->nameCanBeUsed(isEditOperation, userInput)){
-//                     qDebug() << "Input OK";
-//                     stringValid = true;
-
-//                     if(isEditOperation == true){
-//                         this->addEditNameActionToUnsavedActions(userInput);
-//                     }else{
-//                         this->addNewNameActionToUnsavedActions(userInput);
-//                     }
-//                 }else{
-//                     QString tmpErrorStr;
-//                     tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list! Please choose another name.");
-//                     timedPopUp(defaultPopUpTimer, tmpErrorStr);
-//                     qDebug() << "Input (" << userInput << ") is a duplicate!";
-//                 }
-//             }else{
-//                 QString tmpErrorStr;
-//                 tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string.");
-//                 timedPopUp(defaultPopUpTimer, tmpErrorStr);
-//                 qDebug() << "Input not OK";
-//             }
-//         }else{
-//             timedPopUp(defaultPopUpTimer, "Empty name is not allowed.");
-//             qDebug() << "Input is empty!";
-//         }
-//     }
-//     return stringValid;
-// }
-
-void profileMenu::addEditNameActionToUnsavedActions(QString oldName, QString newName){
-    //if(1){} //maybe add additional check for correctness of index before editing?
-    // QString oldName = ui->visibleProfileList->selectedItems().at(0)->text();
-
-    ui->visibleProfileList->selectedItems().at(0)->setText(newName);
-    qDebug() << "   ## (edit) oldName: " << oldName << ", newName: " << newName;
-    profAction act{oldName, newName};
-    this->unsavedActions.append(act);
+void profileMenu::handleProfileNameEdited(QString oldName, QString newName){
+    qDebug() << "(edit) oldName: " << oldName << ", newName: " << newName;
+    this->ui->visibleProfileList->selectedItems().at(0)->setText(newName);
+    this->unsavedActions.append(profAction{oldName, newName});
     this->dialog.close();
 }
 
-void profileMenu::addNewNameActionToUnsavedActions(QString newName){
-    ui->visibleProfileList->addItem(newName);
-
-    qDebug() << "   ## (new) userInput: " << newName;
-
-    profAction act{"", newName};
-    this->unsavedActions.append(act);
+void profileMenu::handleNewProfileCreation(QString newName){
+    qDebug() << "(new) userInput: " << newName;
+    this->ui->visibleProfileList->addItem(newName);
+    this->unsavedActions.append(profAction{"", newName});
     this->dialog.close();
 }
 
@@ -625,35 +362,24 @@ QString profileMenu::getCurrSelProfileName(){
     }
 }
 
-void profileMenu::handleSelectionChange(){
-    qDebug() << "handleSelectionChange";
-
-    //ToDo
-    if(ui->visibleProfileList->selectedItems().length() == 0){
-        qDebug() << "disable";
-        this->setEditDelDisabled();
-    }else{
+void profileMenu::handleSelectedProfileChanged(){
+    qDebug() << "start: handleSelectionChange";
+    if(ui->visibleProfileList->selectedItems().length() > 0){
         qDebug() << "enable";
         this->setEditDelEnabled();
+    }else{
+        qDebug() << "disable";
+        this->setEditDelDisabled();
     }
-
-    qDebug() << "/handleSelectionChange";
+    qDebug() << "end: handleSelectionChange";
 }
 
-// void profileMenu::setSaveEnabled(){
-//     ui->btnSave->setEnabled(true);
-// }
-
-// void profileMenu::setSaveDisabled(){
-//     ui->btnSave->setDisabled(true);
-// }
-
 void profileMenu::setEditDelEnabled(){
-    ui->btnEdit->setEnabled(true);
-    ui->btnDelete->setEnabled(true);
+    this->ui->btnEdit->setEnabled(true);
+    this->ui->btnDelete->setEnabled(true);
 }
 
 void profileMenu::setEditDelDisabled(){
-    ui->btnEdit->setDisabled(true);
-    ui->btnDelete->setDisabled(true);
+    this->ui->btnEdit->setDisabled(true);
+    this->ui->btnDelete->setDisabled(true);
 }

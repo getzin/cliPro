@@ -15,41 +15,36 @@ class contentButton : public QPushButton, public contentBtnCount
     Q_OBJECT
 
 public:
-    // contentButton(dynAddRmButton *dynBtnPtr);
-    contentButton(QWidget *parent);
+    explicit contentButton(QWidget *parent);
     ~contentButton();
 
-    bool isMarked();
-    void unsetMarked();
+    bool isMarkedForDeletion();
+    void unsetMarkedForDeletion();
+
     bool isFocused();
     void gainFocus();
     void unsetAsFocusedButton();
     static void clearFocusedButton();
+    static bool isAnyButtonInFocus();
 
-    // void obtainFocus();
-    int indexInGrid = -1;
+    qsizetype indexInGrid = -1; //ToDo move to private and use getter/setter instead
 
     QString getTitle();
-    QString getContent();
     void setTitle(QString title);
-    void setContent(QString content);
     bool hasTitle();
-    // bool hasContent();
+
+    QString getContent();
+    void setContent(QString content);
 
 
 signals:
-    // void contentButtonWasLeftClicked();
     void dynBtnSetMode(dynAddRmButton::btnMode);
-    // void dynBtnSwitchMode(dynAddRmButton::btnMode);
-    // void dynBtnSetAddMode();
-    // void dynBtnSetRmMode();
-    void deleteButton(int indexOfSender);
-    void keyWasPressed(int key, int indexOfSender);
-    void startContentButtonEdit(int indexOfSender);
+    void deleteButton(qsizetype indexOfSender);
+    void keyWasPressed(int key, qsizetype indexOfSender);
+    void startContentButtonEdit(qsizetype indexOfSender);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
-    // void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
@@ -59,28 +54,26 @@ protected:
 private slots:
     void titleAdjust();
     void removeTitle();
-    void markForDeletion();
+    void switchMarkedForDeletion();
     void deleteThisButton();
 
 private:
     static contentButton *focusedButton;
-    bool marked = false;
+    bool markedForDeletion = false;
 
-    bool notMarked();
+    bool notMarkedForDeletion();
     bool notFocused();
-    void setMarked();
-    void switchMarking();
+    void setMarkedForDeletion();
     void setAsFocusedButton();
-    static bool isAnyButtonInFocus();
 
     void setStyleDefault();
-    void setStyleMarked();
     void setStyleFocused();
-    void setStyleMarkedAndFocus();
+    void setStyleMarkedForDeletion();
+    void setStyleMarkedForDelAndFocus();
 
     void checkForDynBtnSwitch();
 
-    void openMenu(QPoint p);
+    void openOptionsMenu(QPoint p);
     void mouseLeftClick();
     void mouseRightClick(QMouseEvent *event);
 
@@ -101,7 +94,6 @@ private:
     static const QString textForMarkDeletionAct;
     static const QString textForUnmarkDeletionAct;
     static const QString textForDeleteButton;
-
 
     static const int minButtonSize_w = 10;
     static const int minButtonSize_h = 10;

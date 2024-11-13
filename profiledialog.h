@@ -20,44 +20,38 @@ public:
     explicit profileDialog(QWidget *parent = nullptr);
     ~profileDialog();
 
-    void setPtrToListWidget(QListWidget *listWidget);
+    void setPtrToVisibleProfileList(QListWidget *listWidget);
 
 signals:
-    void editName(QString oldName, QString newName);
-    void newName(QString newName);
+    void profileNameEdited(QString oldName, QString newName);
+    void createNewProfile(QString newName);
 
 public slots:
-    void newProfile();
-    // void editProfile(int indexOfEditedProfile, QString previousName);
-    void editProfile();
-
-// signals:
-//     void verifyInput();
+    void startNewProfileCreation();
+    void startEditOfProfileName();
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
     void adjustOKButton();
-    void processOK();
+    void processOKbuttonPressed();
 
 private:
-    Ui::profileDialog *ui;
-
-    dialogMode currMode = dialogModeNew;
-    QString currEditName = "";
-    int currEditIndex = -1;
-
     void start();
-    // void processOK();
-    QListWidget *listWidgetPtr;
+
+    Ui::profileDialog *ui;
+    dialogMode currMode = dialogModeNew;
+
+    qsizetype currEditIndex = -1;
+    QString currEditName = "";
+    QListWidget *visibleProfileListPtr; //ToDo check if this can be implemented better or force it being set to something legit? Currently doing nullptr checks on it
 
     bool checkStringIsAlphanumeric(QString strToCheck);
-    bool nameCanBeUsed(QString userInput);
-    // void addEditNameActionToUnsavedActions(QString userInput);
-    // void addNewNameActionToUnsavedActions(QString userInput);
-    // void processUserInput(bool isEditOperation, QString windowName, QString promptText, QString defaultTxtForInput);
-    // void processUserInput(QString userInput);
+    bool checkNameIsNotTaken(QString nameTocheck);
+
+    static const int windowWidth = 240;
+    static const int windowHeight = 130;
 };
 
 #endif // PROFILEDIALOG_H

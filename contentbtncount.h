@@ -5,27 +5,27 @@
 
 class contentBtnCount {
 public:
-    static int getTotalCnt(){ return totalContentBtnCount; }
-    static int getMarkedCnt(){ return markedContentBtnCount; }
+    static qsizetype getTotalCnt(){ return totalContentBtnCount; }
+    static qsizetype getMarkedForDelCnt(){ return markedForDeletionCount; }
 
 protected:
-    //ctor as protected, to make this class only be usable as base class, but not instantiable
+    //ctor as protected, to make this class only usable as a base class, but not instantiable
     contentBtnCount(){
-        totalContentBtnCount++;
+        ++totalContentBtnCount;
         qDebug() << "contentBtnCount (Ctor) | post-creation-button-count: " << totalContentBtnCount;
     }
 
     ~contentBtnCount(){
-        totalContentBtnCount--;
+        --totalContentBtnCount;
         qDebug() << "contentBtnCount (Dtor) | post-deletion-button-count: " << totalContentBtnCount;
     }
 
-    static int incrMarkedCnt(){ return ++markedContentBtnCount; }
-    static int decrMarkedCnt(){ return --markedContentBtnCount; }
+    static qsizetype incrMarkedForDelCnt(){ return ++markedForDeletionCount; }
+    static qsizetype decrMarkedForDelCnt(){ return --markedForDeletionCount; }
 
 private:
-    static int totalContentBtnCount;
-    static int markedContentBtnCount;
+    static qsizetype totalContentBtnCount;
+    static qsizetype markedForDeletionCount;
 };
 
 #endif // CONTENTBTNCOUNT_H

@@ -9,8 +9,6 @@
 #include <QTextDocument>
 #include <QInputDialog>
 
-
-
 const QString contentButton::textForNewTitleAct = "Add title";
 const QString contentButton::textForEditTitleAct = "Edit title";
 const QString contentButton::textForRemoveTitleAct = "Remove title";
@@ -18,11 +16,10 @@ const QString contentButton::textForMarkDeletionAct = "Mark for deletion";
 const QString contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
 const QString contentButton::textForDeleteButton = "Delete button";
 
-int contentBtnCount::totalContentBtnCount = 0;
-int contentBtnCount::markedContentBtnCount = 0;
+qsizetype contentBtnCount::totalContentBtnCount = 0;
+qsizetype contentBtnCount::markedForDeletionCount = 0;
 contentButton* contentButton::focusedButton = nullptr;
 
-// contentButton::contentButton(dynAddRmButton *dynBtnPtr){
 contentButton::contentButton(QWidget *parent)
     : QPushButton(parent),
     newEditTitleAction(textForNewTitleAct, this),
@@ -33,110 +30,108 @@ contentButton::contentButton(QWidget *parent)
     this->setMinimumSize(this->minButtonSize_w, this->minButtonSize_h);
     this->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
     this->setStyleDefault();
-    // this->setFocusPolicy(Qt::ClickFocus); //disables tab focus
     this->setFocusPolicy(Qt::StrongFocus); //tab+click focus
     this->setAttribute(Qt::WA_MacShowFocusRect);
-    // this->setStyleSheet("contentButton:focus { border: none; outline: none; }");
-    // this->setStyleSheetWrap("contentButton:focus { color: black; border: 1px solid grey; border-radius: 10%; outline: none;"
-    //                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fafacd, stop:1 #f7f7ba) }");
-    // dynBtn = dynBtnPtr;
-    this->indexInGrid = getTotalCnt() - 1; //-1 here, as the number is already increased (see ctor of contentbtncount.h)
+
+    //ToDo when indexInGrid setter/getter is created, think about this logic again
+    this->indexInGrid = getTotalCnt() - 1; //-1 here as the number is already increased (see ctor of contentbtncount.h)
 
     //---MENU---
-    optionsMenu.addAction(&newEditTitleAction);
-    titleActionSeparator = optionsMenu.addSeparator();
-    titleActionSeparator->setVisible(false);
-    optionsMenu.addAction(&removeTitleAction);
-    removeTitleAction.setVisible(false);
-    optionsMenu.addSeparator();
-    optionsMenu.addAction(&markForDeleteAction);
-    optionsMenu.addSeparator();
-    optionsMenu.addAction(&deleteButtonAction);
-    connect(&newEditTitleAction, SIGNAL(triggered()), this, SLOT(titleAdjust()));
-    connect(&removeTitleAction, SIGNAL(triggered()), this, SLOT(removeTitle()));
-    connect(&markForDeleteAction, SIGNAL(triggered()), this, SLOT(markForDeletion()));
-    connect(&deleteButtonAction, SIGNAL(triggered()), this, SLOT(deleteThisButton()));
+    this->optionsMenu.addAction(&(this->newEditTitleAction));
+    this->titleActionSeparator = this->optionsMenu.addSeparator();
+    this->titleActionSeparator->setVisible(false);
+    this->optionsMenu.addAction(&(this->removeTitleAction));
+    this->removeTitleAction.setVisible(false);
+    this->optionsMenu.addSeparator();
+    this->optionsMenu.addAction(&(this->markForDeleteAction));
+    this->optionsMenu.addSeparator();
+    this->optionsMenu.addAction(&(this->deleteButtonAction));
+
+    //---qt connects---
+    connect(&(this->newEditTitleAction), SIGNAL(triggered()), this, SLOT(titleAdjust()));
+    connect(&(this->removeTitleAction), SIGNAL(triggered()), this, SLOT(removeTitle()));
+    connect(&(this->markForDeleteAction), SIGNAL(triggered()), this, SLOT(switchMarkedForDeletion()));
+    connect(&(this->deleteButtonAction), SIGNAL(triggered()), this, SLOT(deleteThisButton()));
 }
 
 
 contentButton::~contentButton(){
-    if(this->isMarked()){
-        this->decrMarkedCnt();
-        if(contentButton::getMarkedCnt() == 0){
-            emit dynBtnSetMode(dynAddRmButton::btnModeADD);
+    if(this->isMarkedForDeletion()){
+        this->decrMarkedForDelCnt();
+        if(contentButton::getMarkedForDelCnt() == 0){
+            emit this->dynBtnSetMode(dynAddRmButton::btnModeADD);
         }
     }
-    this->unsetAsFocusedButton(); //func already includes check on whether even "is focused" or not
+    this->unsetAsFocusedButton(); //called func already includes check on whether this button "is focused" or not
 }
 
 void contentButton::setStyleDefault(){
-    qDebug() << "  style (default)";
+    qDebug() << "style (default)";
     this->setStyleSheet("contentButton { color: black; border: 1px solid silver; border-radius: 10%; "
                             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F0F0, stop:1 #eaeaea) }");
 }
 
-void contentButton::setStyleMarked(){
-    qDebug() << "  style (marked)";
-    // this->setStyleSheetWrap("background-color: #FFB0B0; outline: 1px dashed #ff0000; outline-offset: 0px; border: 1px solid silver; border-radius: 10%;");
+void contentButton::setStyleFocused(){
+    qDebug() << "style (focus)";
+    this->setStyleSheet("contentButton { color: black; border: 1px solid grey; border-radius: 10%;"
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fbfbd5, stop:1 #fdfde2) }"
+                        "contentButton:focus { color: black; border: 2px solid grey; border-radius: 10%; outline: none;"
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fafacd, stop:1 #f7f7ba) }");
+}
+
+void contentButton::setStyleMarkedForDeletion(){
+    qDebug() << "style (marked)";
     this->setStyleSheet("contentButton { color: black; border: 1px solid lightcoral; border-radius: 10%;"
                             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffe8e3, stop:1 #fad4cd) }");
 }
 
-void contentButton::setStyleFocused(){
-    qDebug() << "  style (focus)";
-    this->setStyleSheet("contentButton { color: black; border: 1px solid grey; border-radius: 10%;"
-                            "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fbfbd5, stop:1 #fdfde2) }"
-                            "contentButton:focus { color: black; border: 2px solid grey; border-radius: 10%; outline: none;"
-                            "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fafacd, stop:1 #f7f7ba) }");
-}
-
-void contentButton::setStyleMarkedAndFocus(){
-    qDebug() << "  style (marked & focus)";
+void contentButton::setStyleMarkedForDelAndFocus(){
+    qDebug() << "style (marked & focus)";
     this->setStyleSheet("contentButton { color: black; border: 1px solid lightcoral; border-radius: 10%;"
                             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffe8e3, stop:1 #fad4cd) }"
                             "contentButton:focus { color: black; border: 2px solid lightcoral; border-radius: 10%; outline: none;"
                             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffdabd, stop:1 #ffcabd) }");
 }
 
-bool contentButton::isMarked(){
-    return this->marked;
+bool contentButton::isMarkedForDeletion(){
+    return this->markedForDeletion;
 }
 
-bool contentButton::notMarked(){
-    return !(this->isMarked());
+bool contentButton::notMarkedForDeletion(){
+    return !(this->isMarkedForDeletion());
 }
 
-void contentButton::setMarked(){
-    if(this->notMarked()){
-        this->incrMarkedCnt();
+void contentButton::setMarkedForDeletion(){
+    if(this->notMarkedForDeletion()){
+        this->incrMarkedForDelCnt();
         if(this->isFocused()){
-            this->setStyleMarkedAndFocus();
+            this->setStyleMarkedForDelAndFocus();
         }else{
-            this->setStyleMarked();
+            this->setStyleMarkedForDeletion();
         }
-        this->marked = true;
+        this->markedForDeletion = true;
         this->markForDeleteAction.setText(this->textForUnmarkDeletionAct);
     }
 }
 
-void contentButton::unsetMarked(){
-    if(this->isMarked()){
-        this->decrMarkedCnt();
+void contentButton::unsetMarkedForDeletion(){
+    if(this->isMarkedForDeletion()){
+        this->decrMarkedForDelCnt();
         if(this->isFocused()){
             this->setStyleFocused();
         }else{
             this->setStyleDefault();
         }
-        this->marked = false;
+        this->markedForDeletion = false;
         this->markForDeleteAction.setText(this->textForMarkDeletionAct);
     }
 }
 
-void contentButton::switchMarking(){
-    if(this->marked){
-        this->unsetMarked();
+void contentButton::switchMarkedForDeletion(){
+    if(this->markedForDeletion){
+        this->unsetMarkedForDeletion();
     }else{
-        this->setMarked();
+        this->setMarkedForDeletion();
     }
     this->checkForDynBtnSwitch();
 }
@@ -148,13 +143,13 @@ void contentButton::checkForDynBtnSwitch(){
          * case 2: button is now marked (was not
          *           before) and our count now is 1
          *           --> switch state of dynFuncBtn to RM */
-    int markedBtnCount = contentButton::getMarkedCnt();
-    if(markedBtnCount == 0 && this->notMarked()){
-        qDebug() << "MODE == ADD?!?";
-        emit dynBtnSetMode(dynAddRmButton::btnModeADD);
-    }else if(markedBtnCount == 1 && this->isMarked()){
-        qDebug() << "MODE == RM?!?";
-        emit dynBtnSetMode(dynAddRmButton::btnModeRM);
+    qsizetype markedForDelCount = contentButton::getMarkedForDelCnt();
+    if(markedForDelCount == 0 && this->notMarkedForDeletion()){
+        qDebug() << "emit set mode to add.";
+        emit this->dynBtnSetMode(dynAddRmButton::btnModeADD);
+    }else if(markedForDelCount == 1 && this->isMarkedForDeletion()){
+        qDebug() << "emit set mode to rm";
+        emit this->dynBtnSetMode(dynAddRmButton::btnModeRM);
     }
 }
 
@@ -165,8 +160,8 @@ bool contentButton::isFocused(){
 void contentButton::setAsFocusedButton(){
     if(this->notFocused()){
         this->setFocus();
-        if(this->isMarked()){
-            this->setStyleMarkedAndFocus();
+        if(this->isMarkedForDeletion()){
+            this->setStyleMarkedForDelAndFocus();
         }else{
             this->setStyleFocused();
         }
@@ -177,8 +172,8 @@ void contentButton::setAsFocusedButton(){
 void contentButton::unsetAsFocusedButton(){
     if(this->isFocused()){
         this->clearFocus();
-        if(this->isMarked()){
-            this->setStyleMarked();
+        if(this->isMarkedForDeletion()){
+            this->setStyleMarkedForDeletion();
         }else{
             this->setStyleDefault();
         }
@@ -208,74 +203,57 @@ bool contentButton::isAnyButtonInFocus(){
 }
 
 void contentButton::keyPressEvent(QKeyEvent *event){
-    qDebug() << "==================== Key press event! (contentButton)";
+    qDebug() << "start: Key press event! (contentButton)";
 
     int key = event->key();
-
     if(key == Qt::Key_Return || key == Qt::Key_Enter){
         qDebug() << "Enter pressed.";
-
         Qt::KeyboardModifiers mod = event->modifiers();
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
-            this->openMenu(this->mapToGlobal(this->rect().center()));
+            this->openOptionsMenu(this->mapToGlobal(this->rect().center()));
         }else{
-            emit startContentButtonEdit(this->indexInGrid);
+            emit this->startContentButtonEdit(this->indexInGrid);
         }
-    }
-
-    if(key == Qt::Key_C){
-        // QGuiApplication::clipboard()->setText(this->text());
+    }else if(key == Qt::Key_C){
         QGuiApplication::clipboard()->setText(this->content);
     }else if(key == Qt::Key_V){
 
         bool save = true;
         if(this->getContent().length() > 0){
-        // if(this->text().length() > 0){
-
             qDebug() << "There already is text!";
             QMessageBox::StandardButton reply;
 
             reply = QMessageBox::question(this, "Override Confirmation",
                                           "Do you really want to override the existing content for this button?"
                                           "<br><br><i>(WARNING: This is irreversible)</i>",
-                                          QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
-
-            if(reply == QMessageBox::Yes){
-                qDebug() << "Yes clicked";
-                // this->removeSelectedButton(indexOfSender);
-            }else if(reply == QMessageBox::No){
-                qDebug() << "No clicked";
+                                          QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
+            if(reply == QMessageBox::No){
                 save = false;
             }
         }
-
         if(save){
-            // this->setText(QGuiApplication::clipboard()->text());
             this->setContent(QGuiApplication::clipboard()->text());
             this->repaint();
         }
-
     }else if(key == Qt::Key_Left || key == Qt::Key_Right
                || key == Qt::Key_Up || key == Qt::Key_Down
                || key == Qt::Key_Delete || key == Qt::Key_Backspace
-               || key == Qt::Key_Escape
-               || key == Qt::Key_Plus || key == Qt::Key_Minus){
-        emit keyWasPressed(key, this->indexInGrid);
-    }else if(key == Qt::Key_Tab){
-        qDebug() << "TAAAAAAAAAAAAAAAAAAB"; //doesn't work?
+               || key == Qt::Key_Escape || key == Qt::Key_Plus){
+        emit this->keyWasPressed(key, this->indexInGrid);
+    }else if(key == Qt::Key_Minus || key == Qt::Key_Underscore){
+        //underscore is Shift+MinusKey(-) on most keyboard layouts
+        Qt::KeyboardModifiers mod = event->modifiers();
+        if(mod == Qt::CTRL || mod == Qt::SHIFT){
+            this->switchMarkedForDeletion();
+        }else{
+            emit this->keyWasPressed(key, this->indexInGrid);
+        }
     }
-    qDebug() << "==================== / Key press event! (contentButton)";
+    qDebug() << "end: Key press event! (contentButton)";
 }
 
 void contentButton::mouseLeftClick(){
-    qDebug() << "Left Button!";
-
-    // QKeyEvent keyPressed(QKeyEvent::KeyPress, Qt::Key_Tab, Qt::NoModifier);
-    // this->keyPressEvent(&keyPressed);
-
-    // this->setFocus();
-    // this->focus
-
+    qDebug() << "Left Button on a contentButton!";
     QFocusEvent* focus = new QFocusEvent(QEvent::MouseButtonPress, Qt::MouseFocusReason);
     this->focusInEvent(focus);
     delete focus;
@@ -283,143 +261,109 @@ void contentButton::mouseLeftClick(){
 
 void contentButton::titleAdjust(){
     qDebug() << "start: titleAdjust";
-    //ToDo
-    bool inputOK;
 
     QString userInput;
+    bool pressedOK;
     if(this->hasTitle()){
-        userInput = QInputDialog::getText(this, "Edit title", "Change title to: ",
-                                                  QLineEdit::Normal, this->title, &inputOK);
+        userInput = QInputDialog::getText(this, "Edit title", "Change title to: ", QLineEdit::Normal, this->title, &pressedOK);
     }else{
-        userInput = QInputDialog::getText(this, "New title", "New title: ",
-                                                  QLineEdit::Normal, "", &inputOK);
+        userInput = QInputDialog::getText(this, "New title", "New title: ", QLineEdit::Normal, "", &pressedOK);
     }
 
-    if (inputOK){
+    if(pressedOK){
         qDebug() << "Input OK";
-        //ToDo
         this->setTitle(userInput);
     }
 
-    qDebug() << "/end: titleAdjust";
+    qDebug() << "end: titleAdjust";
 }
 
 void contentButton::removeTitle(){
     this->setTitle("");
 }
 
-void contentButton::markForDeletion(){
-    qDebug() << "markForDeletion";
-    this->switchMarking();
-}
-
 void contentButton::deleteThisButton(){
-    emit deleteButton(this->indexInGrid);
+    emit this->deleteButton(this->indexInGrid);
 }
 
-void contentButton::openMenu(QPoint p){
-
-    qDebug() << "openMenu (x: "  << p.x() << ", y: " << p.y() << ")";
-
-    // if(!this->rightClickMenu.isVisible()){
-        // ToDo open Menu..
-
-        optionsMenu.popup(p);
-        // rightClickMenu.setFocus();
-    // }
+void contentButton::openOptionsMenu(QPoint p){
+    qDebug() << "start: openOptionsMenu (x: " << p.x() << ", y: " << p.y() << ")";
+    optionsMenu.popup(p);
 }
 
+QString contentButton::getTitle(){
+    return this->title;
+}
+
+void contentButton::setTitle(QString title){
+    qDebug() << "start: setButtonTitle";
+    if(title.length() > 0){
+        this->title = title;
+        this->newEditTitleAction.setText(textForEditTitleAct);
+        titleActionSeparator->setVisible(true);
+        removeTitleAction.setVisible(true);
+    }else{
+        this->title.clear();
+        this->newEditTitleAction.setText(textForNewTitleAct);
+        titleActionSeparator->setVisible(false);
+        removeTitleAction.setVisible(false);
+    }
+    qDebug() << "end: setButtonTitle";
+}
+
+bool contentButton::hasTitle(){
+    return (this->title.length() > 0);
+}
+
+QString contentButton::getContent(){
+    return this->content;
+}
+
+void contentButton::setContent(QString content){
+    qDebug() << "start: setButtonContent";
+    this->content = content;
+
+    //ToDo check this part.. maybe create "updateText" function? Maybe use repaint? Think about this again if paintEvent is changed
+    //this->setText(this->buttonTitle);
+    //this->repaint()
+
+    qDebug() << "end: setButtonContent";
+}
 
 void contentButton::mouseRightClick(QMouseEvent *event){
     qDebug() << "start: mouseRightClick";
-
-    this->openMenu(event->globalPosition().toPoint());
-
+    this->openOptionsMenu(event->globalPosition().toPoint());
     qDebug() << "end: mouseRightClick";
 }
 
-// void contentButton::mousePressEvent(QMouseEvent *event){
-//     qDebug() << "mousePressEvent";
-//     this->setFocus();
-//     ; //do nothing (this override serves the purpose of blocking the style change that normally happens)
-//     qDebug() << "/mousePressEvent";
-// }
-
 void contentButton::mousePressEvent(QMouseEvent *event){
-// void contentButton::mouseReleaseEvent(QMouseEvent *event){
-    qDebug() << "mousePressEvent";
-    // this->setFocus();
-    // this->setFocus(Qt::TabFocusReason);
+    qDebug() << "start: mousePressEvent";
     this->setAsFocusedButton();
-
-    // QFocusEvent* focus = new QFocusEvent(QEvent::MouseButtonPress, Qt::MouseFocusReason);
-    // this->focusInEvent(focus);
-    // delete focus;
-
     if(event->button() == Qt::LeftButton){
         this->mouseLeftClick();
     }else if(event->button() == Qt::RightButton){
         this->mouseRightClick(event);
     }
-    qDebug() << "/mousePressEvent";
+    qDebug() << "end: mousePressEvent";
 }
 
-// void contentButton::obtainFocus(){
-//     this->setFocus();
-// }
-
-
-//ToDo currently does not seem to always trigger for right clicks (something to do with the focus logic, maybe race condition)
 void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
     //https://www.youtube.com/watch?v=Yg1FBrbfwNM
-    qDebug() << "Double click!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
-
-    //ToDo open edit
-    // buttonEdit *btnEdit = new buttonEdit();
-
-    // buttonEdit *btnEdit = new buttonEdit(this, this->text());
-    // btnEdit->setModal(true);
-
-    // btnEdit->setWindowFlags(Qt::CustomizeWindowHint);
-    // btnEdit->setWindowFlags(Qt::CustomizeWindowHint);
-    // btnEdit->setWindowFlags(Qt::FramelessWindowHint);
-    // btnEdit->setWindowFlags(Qt::CustomizeWindowHint);
-    // btnEdit->setWindowFlags(Qt::WindowTitleHint);
-    // btnEdit->
-    // btnEdit->setStyleSheet("background-color: white; border: 1px solid silver; border-radius: 10%;");
-
-    // btnEdit->setStyle(QPushButton::style());
-
-    // btnEdit->getCancelBtn()->setStyle(QPushButton::style());
-    // btnEdit->getSaveBtn()->setStyle(QPushButton::style());
-
-
-
-    // buttonEdit *btnEdit = new buttonEdit(this, this->text());
-    // btnEdit->setModal(true);
-    // btnEdit->show();
-
-
-    // delete btnEdit;
-
-    // btnEdit->setParent(this);
-
+    qDebug() << "Double click!";
     if(event->button() == Qt::LeftButton){
-        // this->setAsSelectedButton();
-        emit startContentButtonEdit(this->indexInGrid);
+        emit this->startContentButtonEdit(this->indexInGrid);
     }else if(event->button() == Qt::RightButton){
         this->mouseRightClick(event);
     }
 }
 
-
 void contentButton::focusOutEvent(QFocusEvent *event){
 
-    qDebug() << "  focusOutEvent ---- this->getMarkedCnt(): " << this->getMarkedCnt();
+    qDebug() << "focusOutEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
+    qDebug() << "focusOutEvent ; index: " << this->indexInGrid;
 
     QWidget::focusOutEvent(event);
-    qDebug() << "focusOutEvent ; index: " << this->indexInGrid;
-    qDebug() << ">Reason: " << event->reason();
+    qDebug() << "Reason: " << event->reason();
 
     Qt::FocusReason r = event->reason();
     if(r == Qt::MouseFocusReason || r == Qt::TabFocusReason
@@ -430,11 +374,11 @@ void contentButton::focusOutEvent(QFocusEvent *event){
 
 void contentButton::focusInEvent(QFocusEvent *event){
 
-    qDebug() << "  focusInEvent ---- this->getMarkedCnt(): " << this->getMarkedCnt();
+    qDebug() << "focusInEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
+    qDebug() << "focusInEvent ; index: " << this->indexInGrid;
 
     QWidget::focusInEvent(event);
-    qDebug() << "focusInEvent ; index: " << this->indexInGrid;
-    qDebug() << ">Reason: " << event->reason();
+    qDebug() << "Reason: " << event->reason();
 
     Qt::FocusReason r = event->reason();
     if(r == Qt::MouseFocusReason || r == Qt::TabFocusReason
@@ -442,56 +386,6 @@ void contentButton::focusInEvent(QFocusEvent *event){
         this->setAsFocusedButton();
     }
 }
-
-QString contentButton::getTitle(){
-    return this->title;
-}
-
-QString contentButton::getContent(){
-    return this->content;
-}
-
-void contentButton::setTitle(QString title){
-    qDebug() << "start: setButtonTitle";
-
-    if(title.length() == 0){
-        this->title.clear();
-        this->newEditTitleAction.setText(textForNewTitleAct);
-        titleActionSeparator->setVisible(false);
-        removeTitleAction.setVisible(false);
-    }else{
-        this->title = title;
-        this->newEditTitleAction.setText(textForEditTitleAct);
-        titleActionSeparator->setVisible(true);
-        removeTitleAction.setVisible(true);
-    }
-
-    // QPaintEvent* ev = new QPaintEvent(this->rect());
-    // this->paintEvent(ev);
-    // this->repaint();
-
-    qDebug() << "end: setButtonTitle";
-}
-
-void contentButton::setContent(QString content){
-    qDebug() << "start: setButtonContent";
-    this->content = content;
-    // QPaintEvent* ev = new QPaintEvent(this->rect());
-    // this->paintEvent(ev);
-    // this->repaint();
-
-    //ToDo check this part.. maybe create "updateText" function?
-    //this->setText(this->buttonTitle);
-    qDebug() << "end: setButtonContent";
-}
-
-bool contentButton::hasTitle(){
-    return (this->title.length() > 0);
-}
-
-// bool contentButton::hasContent(){
-//     return (this->content.length() > 0);
-// }
 
 void contentButton::paintEvent(QPaintEvent *event){
 

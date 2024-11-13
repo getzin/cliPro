@@ -21,7 +21,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
     void loadAppSettings();
@@ -33,66 +33,52 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
-    // void mouseReleaseEvent(QMouseEvent *event) override;
-    // void mouseDoubleClickEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
-    void processDynBtnAction();
+    void processDynBtnMainAction();
+    void processDynBtnKeyPress(int key);
     void unmarkAllContentButtons();
     void profileButtonClicked();
     void updateButtonsForProfileChange(QString profileName);
     void createDefaultJsonForNewProfile(QString profileName);
-    void processDynBtnArrowKeyPress(int key);
-    void processContentButtonKeyPress(int key, int indexOfSender);
-    void openButtonEdit(int indexOfSender);
+    void processContentButtonKeyPress(int key, qsizetype indexOfSender);
+    void startButtonEdit(qsizetype indexOfSender);
     void adjustButtons(dynAddRmButton::btnMode mode);
     void processActionForAddButton();
+    void processActionForSearchButton();
     void processTextFieldChange(QString);
-    void processButtonDeletion(int indexOfSender);
+    void processSingleButtonDeletion(qsizetype indexOfSender);
 
 private:
-    //methods
     void fixTabOrder();
     void addDynBtnAtEndOfContentButtons();
-    // dynAddRmButton* getOrCreateDynBtn();
-    void processActionAdd(QString defaultText);
-    void processActionRm();
+    void processAddANewButton(QString defaultText);
+    void processRemoveAllMarkedButtons();
+    void processMinusKey();
+    void processEscapeKey();
+    void processRemainingKeys(int key);
     void updateIndexOfAllButtons();
-    void removeAllMarkedButtons();
+    void removeAllButtonsThatAreMarkedForDel();
     void deleteAllItemsFromGrid();
     void buildGridFromContentList();
     void clearContentButtonList();
     void changeProfileName(QString newName);
     void setDisplayedProfileName(QString name);
     void rebuildGrid();
-    void removeSelectedButton(int index);
-    void processArrowKeyPress(int key, int indexOfSender);
-
-    // void setUpDynBtn();
+    void removeSelectedButton(qsizetype index);
+    void doDefaultFocus();
+    void processArrowKeyPress(int key, qsizetype indexOfSender);
     void setUpUnmarkAllBtn();
 
-    //variables & consts
     Ui::MainWindow *ui;
-    static const int maxItemsPerRow = 4;
+    static const qsizetype maxItemsPerRow = 4;
     static const int minWindowSize_w = 500;
     static const int minWindowSize_h = 200;
     static const int defaultWindowSize_w = 800;
     static const int defaultWindowSize_h = 400;
 
-    //profileButton *profileBtn = nullptr;
     QVector<contentButton*> contentBtnList;
-
-    // QString path = QStandardPaths::writableLocation(
-    //                    QStandardPaths::HomeLocation) +
-    //                "/qtProjects/dynTiling/buttons.json";
-
-    // QString appName = "cliProV1";
-    // QString appAuthor = "Andreas Getzin";
-    // QString recentFilesGroup = "recentFiles";
-    // QString recentFilesValPrefix = "file";
-    // QStringList recentFiles;
-
 
     QPushButton *unmarkAllBtn = nullptr; //ToDo non-pointer
     dynAddRmButton *dynBtn = nullptr; //ToDo non-pointer
@@ -104,9 +90,9 @@ private:
     static const QString appName;
     static const QString appAuthor;
     static const QString settingsFile;
-    static const QString settingsGeneralGroup;
-    static const QString settingsGeneralLastWindowWidth;
-    static const QString settingsGeneralLastWindowHeight;
+    static const QString settingsGroupGeneral;
+    static const QString settingsValWindowWidth;
+    static const QString settingsValWindowHeight;
 };
 
 #endif // MAINWINDOW_H
