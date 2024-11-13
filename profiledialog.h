@@ -19,7 +19,6 @@ public:
     };
     explicit profileDialog(QWidget *parent = nullptr);
     ~profileDialog();
-
     void setPtrToVisibleProfileList(QListWidget *listWidget);
 
 signals:
@@ -39,6 +38,8 @@ private slots:
 
 private:
     void start();
+    bool checkStringIsAlphanumeric(QString strToCheck) const;
+    bool checkNameIsNotTaken(QString nameTocheck) const;
 
     Ui::profileDialog *ui;
     dialogMode currMode = dialogModeNew;
@@ -47,11 +48,8 @@ private:
     QString currEditName = "";
     QListWidget *visibleProfileListPtr; //ToDo check if this can be implemented better or force it being set to something legit? Currently doing nullptr checks on it
 
-    bool checkStringIsAlphanumeric(QString strToCheck);
-    bool checkNameIsNotTaken(QString nameTocheck);
-
-    static const int windowWidth = 240;
-    static const int windowHeight = 130;
+    static int const windowWidth = 240;
+    static int const windowHeight = 130;
 };
 
 #endif // PROFILEDIALOG_H

@@ -5,7 +5,6 @@
 
 #include "timedpopup.h"
 
-
 profileDialog::profileDialog(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::profileDialog)
@@ -104,7 +103,7 @@ void profileDialog::keyPressEvent(QKeyEvent *event){
 }
 
 //static
-bool profileDialog::checkStringIsAlphanumeric(QString strToCheck){
+bool profileDialog::checkStringIsAlphanumeric(QString strToCheck) const{
     bool stringIsValid = true;
     qsizetype strSize = strToCheck.size();
     qDebug() << "Str Size: " << strSize;
@@ -127,7 +126,7 @@ bool profileDialog::checkStringIsAlphanumeric(QString strToCheck){
     return stringIsValid;
 }
 
-bool profileDialog::checkNameIsNotTaken(QString nameTocheck){
+bool profileDialog::checkNameIsNotTaken(QString nameTocheck) const{
     qDebug() << "start: nameCanBeUsed";
     qDebug() << "isEditOperation: " << this->currMode;
     if(this->visibleProfileListPtr){

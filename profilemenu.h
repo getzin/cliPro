@@ -13,10 +13,9 @@ class profileMenu : public QDialog
     Q_OBJECT
 
 public:
-
     explicit profileMenu(QWidget *parent = nullptr);
     ~profileMenu();
-    QString getCurrSelProfileName();
+    QString getCurrSelProfileName() const;
     static QString constructFilePathForProfileJson(QString profileName);
 
 signals:
@@ -30,11 +29,9 @@ protected:
 private slots:
     void handleNewProfileCreation(QString newName);
     void handleProfileNameEdited(QString oldName, QString newName);
-
     void deleteButtonPressed();
     void cancelButtonPressed();
     void saveButtonPressed();
-
     void handleSelectedProfileChanged();
 
 private:
@@ -47,18 +44,17 @@ private:
         QString newName;
     };
     QList<profAction> unsavedActions;
-
-    Ui::profileMenu *ui;
-
+    profileDialog dialog;
     qsizetype lastSavedSelProfileID = -1; //-1 means "none selected/invalid"
     QStringList internalProfilesList;
+    Ui::profileMenu *ui;
 
-    static const QString appName;
-    static const QString appAuthor;
-    static const QString settingsFile;
-    static const QString settingsGroupProfiles;
-    static const QString settingsValProfilesList;
-    static const QString settingsValCurrProfileID;
+    static QString const appName;
+    static QString const appAuthor;
+    static QString const settingsFile;
+    static QString const settingsGroupProfiles;
+    static QString const settingsValProfilesList;
+    static QString const settingsValCurrProfileID;
 
     void constructVisibleListFromInternal();
     void saveVisibleListToInternal();
@@ -69,8 +65,6 @@ private:
 
     void setEditDelEnabled();
     void setEditDelDisabled();
-
-    profileDialog dialog;
 };
 
 #endif // PROFILEMENU_H

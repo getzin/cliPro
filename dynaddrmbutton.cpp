@@ -62,8 +62,7 @@ void dynAddRmButton::switchMode(){
     qDebug() << "end: switch mode";
 }
 
-dynAddRmButton::btnMode dynAddRmButton::getCurrBtnMode()
-{
+dynAddRmButton::btnMode dynAddRmButton::getCurrBtnMode() const{
     return this->currBtnMode;
 }
 

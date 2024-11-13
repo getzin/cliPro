@@ -9,12 +9,12 @@
 #include <QTextDocument>
 #include <QInputDialog>
 
-const QString contentButton::textForNewTitleAct = "Add title";
-const QString contentButton::textForEditTitleAct = "Edit title";
-const QString contentButton::textForRemoveTitleAct = "Remove title";
-const QString contentButton::textForMarkDeletionAct = "Mark for deletion";
-const QString contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
-const QString contentButton::textForDeleteButton = "Delete button";
+QString const contentButton::textForNewTitleAct = "Add title";
+QString const contentButton::textForEditTitleAct = "Edit title";
+QString const contentButton::textForRemoveTitleAct = "Remove title";
+QString const contentButton::textForMarkDeletionAct = "Mark for deletion";
+QString const contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
+QString const contentButton::textForDeleteButton = "Delete button";
 
 qsizetype contentBtnCount::totalContentBtnCount = 0;
 qsizetype contentBtnCount::markedForDeletionCount = 0;
@@ -33,8 +33,8 @@ contentButton::contentButton(QWidget *parent)
     this->setFocusPolicy(Qt::StrongFocus); //tab+click focus
     this->setAttribute(Qt::WA_MacShowFocusRect);
 
-    //ToDo when indexInGrid setter/getter is created, think about this logic again
-    this->indexInGrid = getTotalCnt() - 1; //-1 here as the number is already increased (see ctor of contentbtncount.h)
+    //-1 here as the number is already increased upon creation (see ctor of contentbtncount.h)
+    this->setIndexInGrid(contentBtnCount::getTotalCnt() - 1);
 
     //---MENU---
     this->optionsMenu.addAction(&(this->newEditTitleAction));
@@ -93,16 +93,16 @@ void contentButton::setStyleMarkedForDelAndFocus(){
                             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffdabd, stop:1 #ffcabd) }");
 }
 
-bool contentButton::isMarkedForDeletion(){
+bool contentButton::isMarkedForDeletion() const{
     return this->markedForDeletion;
 }
 
-bool contentButton::notMarkedForDeletion(){
+bool contentButton::isNotMarkedForDeletion() const{
     return !(this->isMarkedForDeletion());
 }
 
 void contentButton::setMarkedForDeletion(){
-    if(this->notMarkedForDeletion()){
+    if(this->isNotMarkedForDeletion()){
         this->incrMarkedForDelCnt();
         if(this->isFocused()){
             this->setStyleMarkedForDelAndFocus();
@@ -144,7 +144,7 @@ void contentButton::checkForDynBtnSwitch(){
          *           before) and our count now is 1
          *           --> switch state of dynFuncBtn to RM */
     qsizetype markedForDelCount = contentButton::getMarkedForDelCnt();
-    if(markedForDelCount == 0 && this->notMarkedForDeletion()){
+    if(markedForDelCount == 0 && this->isNotMarkedForDeletion()){
         qDebug() << "emit set mode to add.";
         emit this->dynBtnSetMode(dynAddRmButton::btnModeADD);
     }else if(markedForDelCount == 1 && this->isMarkedForDeletion()){
@@ -153,12 +153,12 @@ void contentButton::checkForDynBtnSwitch(){
     }
 }
 
-bool contentButton::isFocused(){
+bool contentButton::isFocused() const{
     return (contentButton::focusedButton == this);
 }
 
 void contentButton::setAsFocusedButton(){
-    if(this->notFocused()){
+    if(this->isNotFocused()){
         this->setFocus();
         if(this->isMarkedForDeletion()){
             this->setStyleMarkedForDelAndFocus();
@@ -186,7 +186,7 @@ void contentButton::gainFocus(){
     this->setAsFocusedButton();
 }
 
-bool contentButton::notFocused(){
+bool contentButton::isNotFocused() const{
     return !(this->isFocused());
 }
 
@@ -212,7 +212,7 @@ void contentButton::keyPressEvent(QKeyEvent *event){
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
             this->openOptionsMenu(this->mapToGlobal(this->rect().center()));
         }else{
-            emit this->startContentButtonEdit(this->indexInGrid);
+            emit this->startContentButtonEdit(this->getIndexInGrid());
         }
     }else if(key == Qt::Key_C){
         QGuiApplication::clipboard()->setText(this->content);
@@ -239,14 +239,14 @@ void contentButton::keyPressEvent(QKeyEvent *event){
                || key == Qt::Key_Up || key == Qt::Key_Down
                || key == Qt::Key_Delete || key == Qt::Key_Backspace
                || key == Qt::Key_Escape || key == Qt::Key_Plus){
-        emit this->keyWasPressed(key, this->indexInGrid);
+        emit this->keyWasPressed(key, this->getIndexInGrid());
     }else if(key == Qt::Key_Minus || key == Qt::Key_Underscore){
         //underscore is Shift+MinusKey(-) on most keyboard layouts
         Qt::KeyboardModifiers mod = event->modifiers();
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
             this->switchMarkedForDeletion();
         }else{
-            emit this->keyWasPressed(key, this->indexInGrid);
+            emit this->keyWasPressed(key, this->getIndexInGrid());
         }
     }
     qDebug() << "end: Key press event! (contentButton)";
@@ -283,7 +283,7 @@ void contentButton::removeTitle(){
 }
 
 void contentButton::deleteThisButton(){
-    emit this->deleteButton(this->indexInGrid);
+    emit this->deleteButton(this->getIndexInGrid());
 }
 
 void contentButton::openOptionsMenu(QPoint p){
@@ -291,7 +291,15 @@ void contentButton::openOptionsMenu(QPoint p){
     optionsMenu.popup(p);
 }
 
-QString contentButton::getTitle(){
+void contentButton::setIndexInGrid(qsizetype index){
+    this->indexInGrid = index;
+};
+
+qsizetype contentButton::getIndexInGrid() const{
+    return this->indexInGrid;
+};
+
+QString contentButton::getTitle() const{
     return this->title;
 }
 
@@ -311,11 +319,11 @@ void contentButton::setTitle(QString title){
     qDebug() << "end: setButtonTitle";
 }
 
-bool contentButton::hasTitle(){
+bool contentButton::hasTitle() const{
     return (this->title.length() > 0);
 }
 
-QString contentButton::getContent(){
+QString contentButton::getContent() const{
     return this->content;
 }
 
@@ -351,7 +359,7 @@ void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
     //https://www.youtube.com/watch?v=Yg1FBrbfwNM
     qDebug() << "Double click!";
     if(event->button() == Qt::LeftButton){
-        emit this->startContentButtonEdit(this->indexInGrid);
+        emit this->startContentButtonEdit(this->getIndexInGrid());
     }else if(event->button() == Qt::RightButton){
         this->mouseRightClick(event);
     }
@@ -360,7 +368,7 @@ void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
 void contentButton::focusOutEvent(QFocusEvent *event){
 
     qDebug() << "focusOutEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
-    qDebug() << "focusOutEvent ; index: " << this->indexInGrid;
+    qDebug() << "focusOutEvent ; index: " << this->getIndexInGrid();
 
     QWidget::focusOutEvent(event);
     qDebug() << "Reason: " << event->reason();
@@ -375,7 +383,7 @@ void contentButton::focusOutEvent(QFocusEvent *event){
 void contentButton::focusInEvent(QFocusEvent *event){
 
     qDebug() << "focusInEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
-    qDebug() << "focusInEvent ; index: " << this->indexInGrid;
+    qDebug() << "focusInEvent ; index: " << this->getIndexInGrid();
 
     QWidget::focusInEvent(event);
     qDebug() << "Reason: " << event->reason();

@@ -23,7 +23,6 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
     void loadAppSettings();
     void saveAppSettings();
     void loadButtonsFromJson();
@@ -72,27 +71,28 @@ private:
     void setUpUnmarkAllBtn();
 
     Ui::MainWindow *ui;
-    static const qsizetype maxItemsPerRow = 4;
-    static const int minWindowSize_w = 500;
-    static const int minWindowSize_h = 200;
-    static const int defaultWindowSize_w = 800;
-    static const int defaultWindowSize_h = 400;
-
     QVector<contentButton*> contentBtnList;
 
     QPushButton *unmarkAllBtn = nullptr; //ToDo non-pointer
     dynAddRmButton *dynBtn = nullptr; //ToDo non-pointer
     profileMenu *profMenu = nullptr; //ToDo non-pointer
     buttonEdit *contEdit = nullptr; //ToDo non-pointer
+
     QString currSelectedProfileName;
     QString pathToFileForSelectedProfile;
 
-    static const QString appName;
-    static const QString appAuthor;
-    static const QString settingsFile;
-    static const QString settingsGroupGeneral;
-    static const QString settingsValWindowWidth;
-    static const QString settingsValWindowHeight;
+    static qsizetype constexpr maxItemsPerRow = 4;
+    static int constexpr minWindowSize_w = 500;
+    static int constexpr minWindowSize_h = 200;
+    static int constexpr defaultWindowSize_w = 800;
+    static int constexpr defaultWindowSize_h = 400;
+
+    static QString const appName;
+    static QString const appAuthor;
+    static QString const settingsFile;
+    static QString const settingsGroupGeneral;
+    static QString const settingsValWindowWidth;
+    static QString const settingsValWindowHeight;
 };
 
 #endif // MAINWINDOW_H

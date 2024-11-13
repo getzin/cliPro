@@ -14,7 +14,7 @@ public:
     };
     explicit dynAddRmButton(btnMode mode = btnModeADD);
     ~dynAddRmButton();
-    btnMode getCurrBtnMode();
+    btnMode getCurrBtnMode() const;
 
 signals:
     void mainWindowButtonsNeedSwitch(dynAddRmButton::btnMode mode);

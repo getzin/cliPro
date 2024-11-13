@@ -354,7 +354,7 @@ void profileMenu::handleNewProfileCreation(QString newName){
     this->dialog.close();
 }
 
-QString profileMenu::getCurrSelProfileName(){
+QString profileMenu::getCurrSelProfileName() const{
     if(this->lastSavedSelProfileID >= 0 && this->lastSavedSelProfileID < this->internalProfilesList.count()){
         return this->internalProfilesList.at(this->lastSavedSelProfileID);
     }else{

@@ -18,22 +18,23 @@ public:
     explicit contentButton(QWidget *parent);
     ~contentButton();
 
-    bool isMarkedForDeletion();
+    bool isMarkedForDeletion() const;
     void unsetMarkedForDeletion();
 
-    bool isFocused();
+    bool isFocused() const;
     void gainFocus();
     void unsetAsFocusedButton();
     static void clearFocusedButton();
     static bool isAnyButtonInFocus();
 
-    qsizetype indexInGrid = -1; //ToDo move to private and use getter/setter instead
+    void setIndexInGrid(qsizetype index);
+    qsizetype getIndexInGrid() const;
 
-    QString getTitle();
+    QString getTitle() const;
     void setTitle(QString title);
-    bool hasTitle();
+    bool hasTitle() const;
 
-    QString getContent();
+    QString getContent() const;
     void setContent(QString content);
 
 
@@ -58,12 +59,10 @@ private slots:
     void deleteThisButton();
 
 private:
-    static contentButton *focusedButton;
-    bool markedForDeletion = false;
-
-    bool notMarkedForDeletion();
-    bool notFocused();
+    bool isNotMarkedForDeletion() const;
     void setMarkedForDeletion();
+
+    bool isNotFocused() const;
     void setAsFocusedButton();
 
     void setStyleDefault();
@@ -77,26 +76,30 @@ private:
     void mouseLeftClick();
     void mouseRightClick(QMouseEvent *event);
 
-    QMenu optionsMenu; //right-click menu (but can be opened via keyboard too)
+    static contentButton *focusedButton;
+    bool markedForDeletion = false;
+
+    QMenu optionsMenu; //right-click menu (can be opened via keyboard too)
     QAction newEditTitleAction;
     QAction removeTitleAction;
     QAction markForDeleteAction;
     QAction deleteButtonAction;
 
-    QAction* titleActionSeparator;
+    QAction* titleActionSeparator; //we enable/disable this separator depending on button state
 
+    qsizetype indexInGrid = -1;
     QString title;
     QString content;
 
-    static const QString textForNewTitleAct;
-    static const QString textForEditTitleAct;
-    static const QString textForRemoveTitleAct;
-    static const QString textForMarkDeletionAct;
-    static const QString textForUnmarkDeletionAct;
-    static const QString textForDeleteButton;
+    static QString const textForNewTitleAct;
+    static QString const textForEditTitleAct;
+    static QString const textForRemoveTitleAct;
+    static QString const textForMarkDeletionAct;
+    static QString const textForUnmarkDeletionAct;
+    static QString const textForDeleteButton;
 
-    static const int minButtonSize_w = 10;
-    static const int minButtonSize_h = 10;
+    static int constexpr minButtonSize_w = 10;
+    static int constexpr minButtonSize_h = 10;
 
 };
 
