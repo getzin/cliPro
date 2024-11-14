@@ -1,13 +1,13 @@
-#include "profiledialog.h"
-#include "ui_profiledialog.h"
+#include "profilenamedialog.h"
+#include "ui_profilenamedialog.h"
 
 #include <QKeyEvent>
 
 #include "timedpopup.h"
 
-profileDialog::profileDialog(QWidget *parent)
+profileNameDialog::profileNameDialog(QWidget *parent)
     : QDialog(parent)
-    , ui(new Ui::profileDialog)
+    , ui(new Ui::profileNameDialog)
 {
     this->ui->setupUi(this);
     this->setModal(true);
@@ -18,18 +18,18 @@ profileDialog::profileDialog(QWidget *parent)
     connect(this->ui->nameInputField, SIGNAL(textEdited(QString)), this, SLOT(adjustOKButton()));
 }
 
-profileDialog::~profileDialog()
+profileNameDialog::~profileNameDialog()
 {
     delete this->ui;
 }
 
-void profileDialog::setPtrToVisibleProfileList(QListWidget *visibleProfileList){
+void profileNameDialog::setPtrToVisibleProfileList(QListWidget *visibleProfileList){
     if(visibleProfileList){
         this->visibleProfileListPtr = visibleProfileList;
     }
 }
 
-void profileDialog::adjustOKButton(){
+void profileNameDialog::adjustOKButton(){
     qDebug() << "start: adjustOKButton";
     if(this->ui->nameInputField->text().isEmpty()){
         this->ui->buttonOK->setDisabled(true);
@@ -39,12 +39,12 @@ void profileDialog::adjustOKButton(){
     qDebug() << "end: adjustOKButton";
 }
 
-void profileDialog::start(){
+void profileNameDialog::start(){
     this->ui->nameInputField->setFocus();
     this->open();
 }
 
-void profileDialog::startNewProfileCreation(){
+void profileNameDialog::startNewProfileCreation(){
     if(this->visibleProfileListPtr){
         this->setWindowTitle("New profile");
         this->ui->labelText->setText("Enter name for new profile: ");
@@ -60,7 +60,7 @@ void profileDialog::startNewProfileCreation(){
     }
 }
 
-void profileDialog::startEditOfProfileName(){
+void profileNameDialog::startEditOfProfileName(){
     qDebug() << "start: editProfile";
     if(this->visibleProfileListPtr && (this->visibleProfileListPtr->count() > 0)){
         if(this->visibleProfileListPtr->selectedItems().size() == 1){
@@ -89,7 +89,7 @@ void profileDialog::startEditOfProfileName(){
     qDebug() << "end: editProfile";
 }
 
-void profileDialog::keyPressEvent(QKeyEvent *event){
+void profileNameDialog::keyPressEvent(QKeyEvent *event){
     qDebug() << "start: Key press event! (profileDialog)";
     int key = event->key();
     if(key == Qt::Key_Return || key == Qt::Key_Enter){
@@ -103,7 +103,7 @@ void profileDialog::keyPressEvent(QKeyEvent *event){
 }
 
 //static
-bool profileDialog::checkStringIsAlphanumeric(QString strToCheck) const{
+bool profileNameDialog::checkStringIsAlphanumeric(QString strToCheck) const{
     bool stringIsValid = true;
     qsizetype strSize = strToCheck.size();
     qDebug() << "Str Size: " << strSize;
@@ -126,7 +126,7 @@ bool profileDialog::checkStringIsAlphanumeric(QString strToCheck) const{
     return stringIsValid;
 }
 
-bool profileDialog::checkNameIsNotTaken(QString nameTocheck) const{
+bool profileNameDialog::checkNameIsNotTaken(QString nameTocheck) const{
     qDebug() << "start: nameCanBeUsed";
     qDebug() << "isEditOperation: " << this->currMode;
     if(this->visibleProfileListPtr){
@@ -153,7 +153,7 @@ bool profileDialog::checkNameIsNotTaken(QString nameTocheck) const{
     return true;
 }
 
-void profileDialog::processOKbuttonPressed(){
+void profileNameDialog::processOKbuttonPressed(){
     QString userInput = this->ui->nameInputField->text();
     if((!userInput.isEmpty())){
         if(this->checkStringIsAlphanumeric(userInput)){

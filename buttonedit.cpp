@@ -7,6 +7,7 @@ buttonEdit::buttonEdit(QWidget *parent)
 {
     this->ui->setupUi(this);
     this->setWindowTitle("Edit text"); //ToDo consider Title? Or maybe buttonEdit should have 2 text inputs (title + text)?
+    this->setModal(true);
     connect(this->ui->btnCancel, SIGNAL(clicked()), this, SLOT(close()));
     connect(this->ui->btnSaveOnly, SIGNAL(clicked()), this, SLOT(handleSaveOnly()));
     connect(this->ui->btnSaveAndClose, SIGNAL(clicked()), this, SLOT(handleSaveAndClose()));

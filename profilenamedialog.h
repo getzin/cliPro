@@ -1,14 +1,14 @@
-#ifndef PROFILEDIALOG_H
-#define PROFILEDIALOG_H
+#ifndef PROFILENAMEDIALOG_H
+#define PROFILENAMEDIALOG_H
 
 #include <QDialog>
 #include <QListWidget>
 
 namespace Ui {
-class profileDialog;
+class profileNameDialog;
 }
 
-class profileDialog : public QDialog
+class profileNameDialog : public QDialog
 {
     Q_OBJECT
 
@@ -17,8 +17,8 @@ public:
         dialogModeEdit = 0,
         dialogModeNew = 1,
     };
-    explicit profileDialog(QWidget *parent = nullptr);
-    ~profileDialog();
+    explicit profileNameDialog(QWidget *parent);
+    ~profileNameDialog();
     void setPtrToVisibleProfileList(QListWidget *listWidget);
 
 signals:
@@ -41,15 +41,15 @@ private:
     bool checkStringIsAlphanumeric(QString strToCheck) const;
     bool checkNameIsNotTaken(QString nameTocheck) const;
 
-    Ui::profileDialog *ui;
+    Ui::profileNameDialog *ui;
     dialogMode currMode = dialogModeNew;
 
     qsizetype currEditIndex = -1;
     QString currEditName = "";
-    QListWidget *visibleProfileListPtr; //ToDo check if this can be implemented better or force it being set to something legit? Currently doing nullptr checks on it
+    QListWidget *visibleProfileListPtr = nullptr; //ToDo check if this can be implemented better or force it being set to something legit? Currently doing nullptr checks on it
 
     static int const windowWidth = 240;
     static int const windowHeight = 130;
 };
 
-#endif // PROFILEDIALOG_H
+#endif // PROFILENAMEDIALOG_H

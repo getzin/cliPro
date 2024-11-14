@@ -73,13 +73,17 @@ private:
     Ui::MainWindow *ui;
     QVector<contentButton*> contentBtnList;
 
-    QPushButton *unmarkAllBtn = nullptr; //ToDo non-pointer
     dynAddRmButton *dynBtn = nullptr; //ToDo non-pointer
-    profileMenu *profMenu = nullptr; //ToDo non-pointer
-    buttonEdit *contEdit = nullptr; //ToDo non-pointer
 
-    QString currSelectedProfileName;
-    QString pathToFileForSelectedProfile;
+    profileMenu profMenu;
+    buttonEdit btnEdit;
+
+    QString currSelectedProfileName; //ToDo rethink this variable / maybe move to profMenu and use getter/setter in all places
+    QString pathToFileForSelectedProfile; //ToDo rethink this variable / maybe move to profMenu and use getter/setter in all places
+
+    QPushButton unmarkAllBtn;
+    static int constexpr stretchOfUnmarkAllBtn = 26; //this value has to be determined empirically
+                         //(it's roughly equal to the stretch of the inputField+addBtn+searchBtn+a bit more for each spacing between the 3)
 
     static qsizetype constexpr maxItemsPerRow = 4;
     static int constexpr minWindowSize_w = 500;

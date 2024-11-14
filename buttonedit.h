@@ -13,7 +13,7 @@ class buttonEdit : public QDialog
     Q_OBJECT
 
 public:
-    explicit buttonEdit(QWidget *parent = nullptr);
+    explicit buttonEdit(QWidget *parent);
     ~buttonEdit();
     void editButton(contentButton* btn);
 

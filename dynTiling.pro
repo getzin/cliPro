@@ -14,8 +14,8 @@ SOURCES += \
     dynaddrmbutton.cpp \
     main.cpp \
     mainwindow.cpp \
-    profiledialog.cpp \
-    profilemenu.cpp
+    profilemenu.cpp \
+    profilenamedialog.cpp
 
 HEADERS += \
     buttonedit.h \
@@ -23,15 +23,15 @@ HEADERS += \
     contentbutton.h \
     dynaddrmbutton.h \
     mainwindow.h \
-    profiledialog.h \
     profilemenu.h \
+    profilenamedialog.h \
     timedpopup.h
 
 FORMS += \
     buttonedit.ui \
     mainwindow.ui \
-    profiledialog.ui \
-    profilemenu.ui
+    profilemenu.ui \
+    profilenamedialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

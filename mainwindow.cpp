@@ -22,6 +22,9 @@ QString const MainWindow::settingsValWindowHeight = "window_height";
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , profMenu(this)
+    , btnEdit(this)
+    , unmarkAllBtn(this)
 {
     this->ui->setupUi(this);
     this->setWindowTitle(this->appName);
@@ -32,18 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     //CREATE dynamic +/- button, BEFORE(!) loadButtonsFromJson
     this->dynBtn = new dynAddRmButton(dynAddRmButton::btnModeADD);
 
-    //this will load all existing profiles into a list of the class
-    this->profMenu = new profileMenu(this);
-    this->profMenu->setModal(true);
-
-    this->contEdit = new buttonEdit(this);
-    this->contEdit->setModal(true);
-
-    connect(this->ui->buttonProfile, SIGNAL(clicked()), this, SLOT(profileButtonClicked()));
-    connect(this->profMenu, SIGNAL(selProfileHasChanged(QString)), this, SLOT(updateButtonsForProfileChange(QString)));
-    connect(this->profMenu, SIGNAL(newProfileCreated(QString)), this, SLOT(createDefaultJsonForNewProfile(QString)));
-
-    this->currSelectedProfileName = profMenu->getCurrSelProfileName();
+    this->currSelectedProfileName = profMenu.getCurrSelProfileName();
     qDebug() << "currSelectedProfileName: " << currSelectedProfileName;
 
     if(this->currSelectedProfileName == nullptr || this->currSelectedProfileName == ""){
@@ -78,31 +70,31 @@ MainWindow::MainWindow(QWidget *parent)
     qDebug() << "dynBtn exists?" << (this->dynBtn == nullptr ? true : false);
 
     this->addDynBtnAtEndOfContentButtons();
+    this->setUpUnmarkAllBtn();
+    this->fixTabOrder();
+
+    //will become "enabled" as soon as there is input in the input field
+    this->ui->buttonAdd->setDisabled(true);
+    this->ui->buttonSearch->setDisabled(true);
 
     connect(this->dynBtn, SIGNAL(released()), this, SLOT(processDynBtnMainAction()));
     connect(this->dynBtn, SIGNAL(keyPressOnDynBtn(int)), this, SLOT(processDynBtnKeyPress(int)));
     connect(this->dynBtn, SIGNAL(mainWindowButtonsNeedSwitch(dynAddRmButton::btnMode)), this, SLOT(adjustButtons(dynAddRmButton::btnMode)));
 
-    this->setUpUnmarkAllBtn();
+    connect(&(this->profMenu), SIGNAL(selProfileHasChanged(QString)), this, SLOT(updateButtonsForProfileChange(QString)));
+    connect(&(this->profMenu), SIGNAL(newProfileCreated(QString)), this, SLOT(createDefaultJsonForNewProfile(QString)));
 
+    connect(this->ui->buttonProfile, SIGNAL(clicked()), this, SLOT(profileButtonClicked()));
     connect(this->ui->buttonAdd, SIGNAL(clicked()), this, SLOT(processActionForAddButton()));
     connect(this->ui->buttonSearch, SIGNAL(clicked()), this, SLOT(processActionForSearchButton()));
     connect(this->ui->textInputField, SIGNAL(textChanged(QString)), this, SLOT(processTextFieldChange(QString)));
-
-    this->ui->buttonAdd->setDisabled(true);
-    this->ui->buttonSearch->setDisabled(true);
-
-    this->fixTabOrder();
 }
 
 MainWindow::~MainWindow()
 {
     this->saveAppSettings();
     this->saveCurrentButtonsAsJson();
-    delete this->unmarkAllBtn;
     delete this->dynBtn;
-    delete this->profMenu;
-    delete this->contEdit;
     delete this->ui;
 }
 
@@ -111,18 +103,18 @@ void MainWindow::fixTabOrder(){
     QWidget::setTabOrder(this->ui->buttonProfile, this->ui->textInputField);
     QWidget::setTabOrder(this->ui->textInputField, this->ui->buttonSearch);
     QWidget::setTabOrder(this->ui->buttonSearch, this->ui->buttonAdd);
-    QWidget::setTabOrder(this->ui->buttonAdd, this->unmarkAllBtn);
+    QWidget::setTabOrder(this->ui->buttonAdd, &(this->unmarkAllBtn));
 
     if(this->contentBtnList.count() > 0){
         qDebug() << "count() > 0";
-        QWidget::setTabOrder(this->unmarkAllBtn, this->contentBtnList.at(0));
+        QWidget::setTabOrder(&(this->unmarkAllBtn), this->contentBtnList.at(0));
         for(qsizetype i = 0; i < this->contentBtnList.count() - 1; ++i){
             qDebug() << "i : " << i;
             QWidget::setTabOrder(this->contentBtnList.at(i), this->contentBtnList.at(i+1));
         }
         QWidget::setTabOrder(this->contentBtnList.last(), this->dynBtn);
     }else{
-        QWidget::setTabOrder(this->unmarkAllBtn, this->dynBtn);
+        QWidget::setTabOrder(&(this->unmarkAllBtn), this->dynBtn);
     }
     qDebug() << "end: Fix Tab order";
 }
@@ -150,6 +142,7 @@ void MainWindow::saveAppSettings(){
     settings.beginGroup(this->settingsGroupGeneral);
     settings.setValue(this->settingsValWindowWidth, QString::number(this->width()));
     settings.setValue(this->settingsValWindowHeight, QString::number(this->height()));
+    //ToDo save this->pos too?
     settings.endGroup();
 }
 
@@ -157,28 +150,26 @@ void MainWindow::setUpUnmarkAllBtn(){
     qDebug() << "start: setUpUnmarkAllBtn";
 
     //not visible at first
-    this->unmarkAllBtn = new QPushButton();
-    this->unmarkAllBtn->setText("Cancel: Do not delete selected buttons");
-    this->unmarkAllBtn->setStyleSheet("color: darkgreen; border: 1px solid lightgreen; border-radius: 30%; font-weight: bold;"
+    this->unmarkAllBtn.setText("Cancel: Do not delete selected buttons");
+    this->unmarkAllBtn.setStyleSheet("color: darkgreen; border: 1px solid lightgreen; border-radius: 30%; font-weight: bold;"
                                       "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f6ffed, stop:1 #edfff4)");
-    this->unmarkAllBtn->hide();
-    this->ui->layoutAtTop->addWidget(this->unmarkAllBtn);
+    this->unmarkAllBtn.hide();
+    this->ui->layoutAtTop->addWidget(&(this->unmarkAllBtn));
 
-    //the stretch of "26" is a combination of the stretch of the other elements + a tiny bit more to make it look nice
-    this->ui->layoutAtTop->setStretch(ui->layoutAtTop->indexOf(this->unmarkAllBtn), 26);
-    connect(this->unmarkAllBtn, SIGNAL(clicked()), this, SLOT(unmarkAllContentButtons()));
+    this->ui->layoutAtTop->setStretch(this->ui->layoutAtTop->indexOf(&(this->unmarkAllBtn)), this->stretchOfUnmarkAllBtn);
+    connect(&(this->unmarkAllBtn), SIGNAL(clicked()), this, SLOT(unmarkAllContentButtons()));
 }
 
 void MainWindow::addDynBtnAtEndOfContentButtons(){
 
     qDebug() << "start: addDynBtnAtEndOfContentButtons";
 
-    //ToDo check if this part is actually needed (might be an artifact of older code)
-    if(this->unmarkAllBtn){
-        //ToDo.. takeAt from widget?
-        delete this->unmarkAllBtn;
-        this->setUpUnmarkAllBtn();
-    }
+    // //ToDo check if this part is actually needed (might be an artifact of older code)
+    // if(this->unmarkAllBtn){
+    //     //ToDo.. takeAt from widget?
+    //     delete this->unmarkAllBtn;
+    //     this->setUpUnmarkAllBtn();
+    // }
 
     if(this->dynBtn == nullptr){
         qDebug() << "dynBtn is nullptr, exit!";
@@ -432,6 +423,7 @@ void MainWindow::processArrowKeyPress(int key, qsizetype indexOfSender){
     }
 
     qDebug() << "newIndex: " << newIndex;
+    //ToDo index check function
     if(newIndex >= 0 && newIndex < this->contentBtnList.count()){
         //contentBtnList.at(newIndex)->setAsSelectedButton();
         //contentBtnList.at(newIndex)->setFocus(); //this worked..
@@ -459,7 +451,8 @@ void MainWindow::processSingleButtonDeletion(qsizetype indexOfSender){
         this->removeSelectedButton(indexOfSender);
 
         //give focus to the button that now takes is in the removed button's place (or dynBtn)
-        if(indexOfSender < this->contentBtnList.count()){
+        //ToDo index check function
+        if(indexOfSender >= 0 && indexOfSender < this->contentBtnList.count()){
             this->contentBtnList.at(indexOfSender)->gainFocus();
         }else{
             this->dynBtn->setFocus();
@@ -533,6 +526,7 @@ void MainWindow::processDynBtnKeyPress(int key){
 
 void MainWindow::processContentButtonKeyPress(int key, qsizetype indexOfSender){
     qDebug() << "start: processKeyPress (index of sender: " << indexOfSender << ")";
+    //ToDo index check function
     if(indexOfSender >= 0 && indexOfSender < this->contentBtnList.length()){
         if(key == Qt::Key_Left || key == Qt::Key_Right
             || key == Qt::Key_Up || key == Qt::Key_Down){
@@ -811,19 +805,11 @@ void MainWindow::processRemoveAllMarkedButtons(){
 //slot
 void MainWindow::profileButtonClicked(){
     qDebug() << "start: profile button clicked";
-    // profilePicker* profiles = new profilePicker(this);
-    // profiles->show();
 
     //clear button selection before opening the menu
-    contentButton::clearFocusedButton();
+    contentButton::clearFocusedButton(); //ToDo check if this is still desired..?
+    this->profMenu.show();
 
-    if(profMenu){
-        qDebug() << "profiles exist";
-        this->profMenu->show();
-    }else{
-        //ToDo this case is probably wrong / unneeded?
-        qDebug() << "no profiles..";
-    }
     qDebug() << "profiles view should now be active...";
 }
 
@@ -885,8 +871,9 @@ void MainWindow::createDefaultJsonForNewProfile(QString profileName){
 
 void MainWindow::startButtonEdit(qsizetype indexOfSender){
     qDebug() << "start: startButtonEdit";
+    //ToDo index check function
     if(indexOfSender >= 0 && indexOfSender < this->contentBtnList.count()){
-        this->contEdit->editButton(this->contentBtnList.at(indexOfSender));
+        this->btnEdit.editButton(this->contentBtnList.at(indexOfSender));
     }else{
         qDebug() << "Invalid index.";
     }
@@ -912,13 +899,13 @@ void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
         this->ui->textInputField->show();
         this->ui->buttonSearch->show();
         this->ui->buttonAdd->show();
-        this->unmarkAllBtn->hide();
+        this->unmarkAllBtn.hide();
     }else if(mode == dynAddRmButton::btnModeRM){
         qDebug() << "RM";
         this->ui->textInputField->hide();
         this->ui->buttonSearch->hide();
         this->ui->buttonAdd->hide();
-        this->unmarkAllBtn->show();
+        this->unmarkAllBtn.show();
     }else{
         qDebug() << "mode: " << mode << " is not a valid mode..";
     }

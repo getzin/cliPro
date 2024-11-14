@@ -1,7 +1,7 @@
 #ifndef PROFILEMENU_H
 #define PROFILEMENU_H
 
-#include "profiledialog.h"
+#include "profilenamedialog.h"
 #include <QDialog>
 
 namespace Ui {
@@ -44,10 +44,10 @@ private:
         QString newName;
     };
     QList<profAction> unsavedActions;
-    profileDialog dialog;
+    Ui::profileMenu *ui;
+    profileNameDialog dialog;
     qsizetype lastSavedSelProfileID = -1; //-1 means "none selected/invalid"
     QStringList internalProfilesList;
-    Ui::profileMenu *ui;
 
     static QString const appName;
     static QString const appAuthor;
