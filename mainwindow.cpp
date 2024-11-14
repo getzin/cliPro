@@ -12,12 +12,7 @@
 #include <QDir>
 #include <QKeyEvent>
 
-QString const MainWindow::appName = "cliProV1";
-QString const MainWindow::appAuthor = "Andreas Getzin";
-QString const MainWindow::settingsFile = "settings/cliProSettings.ini";
-QString const MainWindow::settingsGroupGeneral = "app";
-QString const MainWindow::settingsValWindowWidth = "window_width";
-QString const MainWindow::settingsValWindowHeight = "window_height";
+#include "appsettings.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -27,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent)
     , unmarkAllBtn(this)
 {
     this->ui->setupUi(this);
-    this->setWindowTitle(this->appName);
+    this->setWindowTitle(appSettings::appName);
     this->setFocusPolicy(Qt::StrongFocus); //without this, arrow keys do not work
     this->setMinimumSize(this->minWindowSize_w, this->minWindowSize_h);
     this->loadAppSettings();
@@ -120,16 +115,40 @@ void MainWindow::fixTabOrder(){
 }
 
 void MainWindow::loadAppSettings(){
-    QSettings settings(this->settingsFile, QSettings::IniFormat);
-    settings.beginGroup(this->settingsGroupGeneral);
-    bool ok;
-    int width = settings.value(this->settingsValWindowWidth).toInt(&ok);
-    if(!ok){
+    QSettings settings(appSettings::settingsFile, QSettings::IniFormat);
+    settings.beginGroup(appSettings::settingsGroupMainWindow);
+    bool pos_x_ok = false;
+    bool pos_y_ok = false;
+    bool width_ok = false;
+    bool height_ok = false;
+    int pos_x = settings.value(appSettings::settingsValMWPosX).toInt(&pos_x_ok);
+    int pos_y = settings.value(appSettings::settingsValMWPosY).toInt(&pos_y_ok);
+    int width = settings.value(appSettings::settingsValMWWidth).toInt(&width_ok);
+    int height = settings.value(appSettings::settingsValMWHeight).toInt(&height_ok);
+
+    if(!pos_x || !pos_y_ok){
+        qDebug() << "Read positions values not OK. Move window to (0,0).";
+        if(QGuiApplication::screens().count() == 1){
+            //place window in center, if either value is not OK
+            QSize primaryScreen = QGuiApplication::primaryScreen()->size();
+            int screenWidth = primaryScreen.width();
+            int screenHeight = primaryScreen.height();
+            pos_x = (screenWidth-width)/2;
+            pos_y = (screenHeight-height)/2;
+        }else{
+            //the code above does not create expected results for multi monitor setups
+            //--> so just move it to coordinate (0,0) if there are more than 1 screens
+            pos_x = 0;
+            pos_y = 0;
+        }
+    }
+    this->move(pos_x, pos_y);
+
+    if(!width_ok){
         qDebug() << "read width not OK. Set default value.";
         width = this->defaultWindowSize_w;
     }
-    int height = settings.value(this->settingsValWindowHeight).toInt(&ok);
-    if(!ok){
+    if(!height_ok){
         qDebug() << "read height not OK. Set default value.";
         height = this->defaultWindowSize_h;
     }
@@ -138,11 +157,15 @@ void MainWindow::loadAppSettings(){
 }
 
 void MainWindow::saveAppSettings(){
-    QSettings settings(this->settingsFile, QSettings::IniFormat);
-    settings.beginGroup(this->settingsGroupGeneral);
-    settings.setValue(this->settingsValWindowWidth, QString::number(this->width()));
-    settings.setValue(this->settingsValWindowHeight, QString::number(this->height()));
+    QSettings settings(appSettings::settingsFile, QSettings::IniFormat);
+    settings.beginGroup(appSettings::settingsGroupMainWindow);
+    settings.setValue(appSettings::settingsValMWWidth, QString::number(this->width()));
+    settings.setValue(appSettings::settingsValMWHeight, QString::number(this->height()));
+
     //ToDo save this->pos too?
+    settings.setValue(appSettings::settingsValMWPosX, QString::number(this->pos().x()));
+    settings.setValue(appSettings::settingsValMWPosY, QString::number(this->pos().y()));
+
     settings.endGroup();
 }
 
@@ -225,7 +248,7 @@ void MainWindow::loadButtonsFromJson(){
     qDebug() << "File as string: " << fileAsString << "\n\n";
 
     QByteArray jsonBA = fileAsString.toLocal8Bit(); //BA = ByteArray
-    QJsonDocument jsonDoc =QJsonDocument::fromJson(jsonBA);
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonBA);
 
     if(jsonDoc.isNull()){
         qDebug() << "Failed to create JSON document.";

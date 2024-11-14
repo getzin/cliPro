@@ -9,6 +9,10 @@
 #include <QTextDocument>
 #include <QInputDialog>
 
+qsizetype contentBtnCount::totalContentBtnCount = 0;
+qsizetype contentBtnCount::markedForDeletionCount = 0;
+contentButton* contentButton::focusedButton = nullptr;
+
 QString const contentButton::textForNewTitleAct = "Add title";
 QString const contentButton::textForEditTitleAct = "Edit title";
 QString const contentButton::textForRemoveTitleAct = "Remove title";
@@ -16,16 +20,12 @@ QString const contentButton::textForMarkDeletionAct = "Mark for deletion";
 QString const contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
 QString const contentButton::textForDeleteButton = "Delete button";
 
-qsizetype contentBtnCount::totalContentBtnCount = 0;
-qsizetype contentBtnCount::markedForDeletionCount = 0;
-contentButton* contentButton::focusedButton = nullptr;
-
 contentButton::contentButton(QWidget *parent)
     : QPushButton(parent),
-    newEditTitleAction(textForNewTitleAct, this),
-    removeTitleAction(textForRemoveTitleAct, this),
-    markForDeleteAction(textForMarkDeletionAct, this),
-    deleteButtonAction(textForDeleteButton, this)
+    newEditTitleAction(this->textForNewTitleAct, this),
+    removeTitleAction(this->textForRemoveTitleAct, this),
+    markForDeleteAction(this->textForMarkDeletionAct, this),
+    deleteButtonAction(this->textForDeleteButton, this)
 {
     this->setMinimumSize(this->minButtonSize_w, this->minButtonSize_h);
     this->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
@@ -53,7 +53,6 @@ contentButton::contentButton(QWidget *parent)
     connect(&(this->markForDeleteAction), SIGNAL(triggered()), this, SLOT(switchMarkedForDeletion()));
     connect(&(this->deleteButtonAction), SIGNAL(triggered()), this, SLOT(deleteThisButton()));
 }
-
 
 contentButton::~contentButton(){
     if(this->isMarkedForDeletion()){
@@ -307,12 +306,12 @@ void contentButton::setTitle(QString title){
     qDebug() << "start: setButtonTitle";
     if(title.length() > 0){
         this->title = title;
-        this->newEditTitleAction.setText(textForEditTitleAct);
+        this->newEditTitleAction.setText(this->textForEditTitleAct);
         titleActionSeparator->setVisible(true);
         removeTitleAction.setVisible(true);
     }else{
         this->title.clear();
-        this->newEditTitleAction.setText(textForNewTitleAct);
+        this->newEditTitleAction.setText(this->textForNewTitleAct);
         titleActionSeparator->setVisible(false);
         removeTitleAction.setVisible(false);
     }

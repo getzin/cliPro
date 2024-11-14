@@ -7,14 +7,8 @@
 #include <QDir>
 #include <QSettings>
 
+#include "appsettings.h"
 #include "timedpopup.h"
-
-const QString profileMenu::appName = "cliProV1";
-const QString profileMenu::appAuthor = "Andreas Getzin";
-const QString profileMenu::settingsFile = "settings/cliProSettings.ini";
-const QString profileMenu::settingsGroupProfiles = "profiles";
-const QString profileMenu::settingsValProfilesList = "profiles_list";
-const QString profileMenu::settingsValCurrProfileID = "current_profile_id";
 
 profileMenu::profileMenu(QWidget *parent)
     : QDialog(parent)
@@ -127,16 +121,16 @@ void profileMenu::saveVisibleListToInternal(){
 
 void profileMenu::loadProfiles(){
     qDebug() << "start: Loading profiles";
-    QSettings settings(this->settingsFile, QSettings::IniFormat);
+    QSettings settings(appSettings::settingsFile, QSettings::IniFormat);
 
     if(!this->internalProfilesList.empty()){
         this->internalProfilesList.clear();
     }
 
-    settings.beginGroup(this->settingsGroupProfiles);
-    this->internalProfilesList.append(settings.value(this->settingsValProfilesList).toStringList()); //read "profiles" (list of string)
+    settings.beginGroup(appSettings::settingsGroupProfiles);
+    this->internalProfilesList.append(settings.value(appSettings::settingsValProfilesList).toStringList()); //read "profiles" (list of string)
 
-    QString tmpCurrSelIdVal = settings.value(this->settingsValCurrProfileID).toString();
+    QString tmpCurrSelIdVal = settings.value(appSettings::settingsValCurrProfileID).toString();
 
     bool isOK = false;
     qsizetype tmpCurrSelIndex = tmpCurrSelIdVal.toInt(&isOK);
@@ -170,10 +164,10 @@ void profileMenu::loadProfiles(){
 
 void profileMenu::saveProfiles(){
     qDebug() << "start: Saving profiles";
-    QSettings settings(this->settingsFile, QSettings::IniFormat);
+    QSettings settings(appSettings::settingsFile, QSettings::IniFormat);
 
-    settings.beginGroup(this->settingsGroupProfiles);
-    settings.setValue(this->settingsValProfilesList, this->internalProfilesList);
+    settings.beginGroup(appSettings::settingsGroupProfiles);
+    settings.setValue(appSettings::settingsValProfilesList, this->internalProfilesList);
 
     bool indexOK = false;
     qsizetype tmpListSize = this->internalProfilesList.size();
@@ -189,7 +183,7 @@ void profileMenu::saveProfiles(){
             if(tmpValForCurrSelID >= 0 && tmpValForCurrSelID < tmpListSize){
                 indexOK = true;
                 qDebug() << "index is in-bounds, good!";
-                settings.setValue(this->settingsValCurrProfileID, QString::number(tmpValForCurrSelID));
+                settings.setValue(appSettings::settingsValCurrProfileID, QString::number(tmpValForCurrSelID));
             }else{
                 qDebug() << "index is out of bounds, bad.";
             }
@@ -201,7 +195,7 @@ void profileMenu::saveProfiles(){
     }
 
     if(!indexOK){
-        settings.setValue(this->settingsValCurrProfileID,  QString::number(-1));
+        settings.setValue(appSettings::settingsValCurrProfileID,  QString::number(-1));
     }
 
     settings.endGroup();

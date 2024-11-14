@@ -24,7 +24,7 @@ private slots:
 
 private:
     Ui::buttonEdit *ui;
-    contentButton* currentlyEditing = nullptr;
+    contentButton *currentlyEditing = nullptr;
 };
 
 #endif // BUTTONEDIT_H

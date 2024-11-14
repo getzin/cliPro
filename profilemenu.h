@@ -49,13 +49,6 @@ private:
     qsizetype lastSavedSelProfileID = -1; //-1 means "none selected/invalid"
     QStringList internalProfilesList;
 
-    static QString const appName;
-    static QString const appAuthor;
-    static QString const settingsFile;
-    static QString const settingsGroupProfiles;
-    static QString const settingsValProfilesList;
-    static QString const settingsValCurrProfileID;
-
     void constructVisibleListFromInternal();
     void saveVisibleListToInternal();
     void processProfilesActions();

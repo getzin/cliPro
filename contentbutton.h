@@ -76,20 +76,21 @@ private:
     void mouseLeftClick();
     void mouseRightClick(QMouseEvent *event);
 
-    static contentButton *focusedButton;
-    bool markedForDeletion = false;
-
     QMenu optionsMenu; //right-click menu (can be opened via keyboard too)
     QAction newEditTitleAction;
     QAction removeTitleAction;
     QAction markForDeleteAction;
     QAction deleteButtonAction;
-
     QAction* titleActionSeparator; //we enable/disable this separator depending on button state
 
     qsizetype indexInGrid = -1;
     QString title;
     QString content;
+    bool markedForDeletion = false;
+
+    static contentButton *focusedButton;
+    static int constexpr minButtonSize_w = 10;
+    static int constexpr minButtonSize_h = 10;
 
     static QString const textForNewTitleAct;
     static QString const textForEditTitleAct;
@@ -98,8 +99,6 @@ private:
     static QString const textForUnmarkDeletionAct;
     static QString const textForDeleteButton;
 
-    static int constexpr minButtonSize_w = 10;
-    static int constexpr minButtonSize_h = 10;
 
 };
 

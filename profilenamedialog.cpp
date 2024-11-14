@@ -11,7 +11,7 @@ profileNameDialog::profileNameDialog(QWidget *parent)
 {
     this->ui->setupUi(this);
     this->setModal(true);
-    this->setFixedSize(windowWidth,windowHeight);
+    this->setFixedSize(this->windowSize_w, this->WindowSize_h);
 
     connect(this->ui->buttonOK, SIGNAL(clicked()), this, SLOT(processOKbuttonPressed()));
     connect(this->ui->buttonCancel, SIGNAL(clicked()), this, SLOT(close()));

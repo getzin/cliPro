@@ -82,21 +82,15 @@ private:
     QString pathToFileForSelectedProfile; //ToDo rethink this variable / maybe move to profMenu and use getter/setter in all places
 
     QPushButton unmarkAllBtn;
+
     static int constexpr stretchOfUnmarkAllBtn = 26; //this value has to be determined empirically
-                         //(it's roughly equal to the stretch of the inputField+addBtn+searchBtn+a bit more for each spacing between the 3)
+        //(it's roughly equal to the stretch of the inputField+addBtn+searchBtn+a bit more for each spacing between the 3)
 
     static qsizetype constexpr maxItemsPerRow = 4;
     static int constexpr minWindowSize_w = 500;
     static int constexpr minWindowSize_h = 200;
     static int constexpr defaultWindowSize_w = 800;
     static int constexpr defaultWindowSize_h = 400;
-
-    static QString const appName;
-    static QString const appAuthor;
-    static QString const settingsFile;
-    static QString const settingsGroupGeneral;
-    static QString const settingsValWindowWidth;
-    static QString const settingsValWindowHeight;
 };
 
 #endif // MAINWINDOW_H

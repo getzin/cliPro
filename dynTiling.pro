@@ -15,9 +15,11 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     profilemenu.cpp \
-    profilenamedialog.cpp
+    profilenamedialog.cpp \
+    timedpopup.cpp
 
 HEADERS += \
+    appsettings.h \
     buttonedit.h \
     contentbtncount.h \
     contentbutton.h \

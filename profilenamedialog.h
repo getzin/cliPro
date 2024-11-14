@@ -48,8 +48,8 @@ private:
     QString currEditName = "";
     QListWidget *visibleProfileListPtr = nullptr; //ToDo check if this can be implemented better or force it being set to something legit? Currently doing nullptr checks on it
 
-    static int const windowWidth = 240;
-    static int const windowHeight = 130;
+    static int constexpr windowSize_w = 240;
+    static int constexpr WindowSize_h = 130;
 };
 
 #endif // PROFILENAMEDIALOG_H
