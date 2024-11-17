@@ -23,18 +23,13 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void loadAppSettings();
-    void saveAppSettings();
-    void loadButtonsFromJson();
-    void saveButtonsAsJson(QString pathToFile, QVector<contentButton*> listOfBtns);
-    void saveDefaultJsonForProfile(QString profileName);
-    void saveCurrentButtonsAsJson();
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
+    void saveCurrentButtonsAsJson();
     void processDynBtnMainAction();
     void processDynBtnKeyPress(int key);
     void unmarkAllContentButtons();
@@ -48,10 +43,17 @@ private slots:
     void processActionForSearchButton();
     void processTextFieldChange(QString);
     void processSingleButtonDeletion(qsizetype indexOfSender);
+    void profMenuCancel();
 
 private:
     void fixTabOrder();
+    void loadAppSettings();
+    void saveAppSettings();
+    void loadButtonsFromJson();
+    void saveButtonsAsJson(QString pathToFile, QVector<contentButton*> listOfBtns);
+    void saveDefaultJsonForProfile(QString profileName);
     void addDynBtnAtEndOfContentButtons();
+    void createAndAddNewButton(qsizetype row, qsizetype col, QString title, QString content);
     void processAddANewButton(QString defaultText);
     void processRemoveAllMarkedButtons();
     void processMinusKey();
@@ -91,6 +93,8 @@ private:
     static int constexpr minWindowSize_h = 200;
     static int constexpr defaultWindowSize_w = 800;
     static int constexpr defaultWindowSize_h = 400;
+    static int constexpr scrollGridSpacing_h = 5; //horizontal
+    static int constexpr scrollGridSpacing_v = 5; //vertical
 };
 
 #endif // MAINWINDOW_H

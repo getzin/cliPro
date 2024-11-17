@@ -12,6 +12,7 @@
 qsizetype contentBtnCount::totalContentBtnCount = 0;
 qsizetype contentBtnCount::markedForDeletionCount = 0;
 contentButton* contentButton::focusedButton = nullptr;
+contentButton* contentButton::lastUnfocusedButton = nullptr;
 
 QString const contentButton::textForNewTitleAct = "Add title";
 QString const contentButton::textForEditTitleAct = "Edit title";
@@ -62,6 +63,7 @@ contentButton::~contentButton(){
         }
     }
     this->unsetAsFocusedButton(); //called func already includes check on whether this button "is focused" or not
+    this->unsetAsLastUnfocusedButton();
 }
 
 void contentButton::setStyleDefault(){
@@ -176,7 +178,14 @@ void contentButton::unsetAsFocusedButton(){
         }else{
             this->setStyleDefault();
         }
+        contentButton::lastUnfocusedButton = this;
         contentButton::focusedButton = nullptr;
+    }
+}
+
+void contentButton::unsetAsLastUnfocusedButton(){
+    if(contentButton::lastUnfocusedButton == this){
+        contentButton::clearLastUnfocusedButton();
     }
 }
 
@@ -201,6 +210,18 @@ bool contentButton::isAnyButtonInFocus(){
     return (contentButton::focusedButton != nullptr);
 }
 
+//static
+void contentButton::restoreLastUnfocusedButtonToFocusedButton(){
+    if(contentButton::lastUnfocusedButton != nullptr){
+        contentButton::lastUnfocusedButton->gainFocus();
+    }
+}
+
+//static
+void contentButton::clearLastUnfocusedButton(){
+    contentButton::lastUnfocusedButton = nullptr;
+}
+
 void contentButton::keyPressEvent(QKeyEvent *event){
     qDebug() << "start: Key press event! (contentButton)";
 
@@ -216,7 +237,6 @@ void contentButton::keyPressEvent(QKeyEvent *event){
     }else if(key == Qt::Key_C){
         QGuiApplication::clipboard()->setText(this->content);
     }else if(key == Qt::Key_V){
-
         bool save = true;
         if(this->getContent().length() > 0){
             qDebug() << "There already is text!";
@@ -232,12 +252,14 @@ void contentButton::keyPressEvent(QKeyEvent *event){
         }
         if(save){
             this->setContent(QGuiApplication::clipboard()->text());
+            this->saveJSON();
             this->repaint();
         }
     }else if(key == Qt::Key_Left || key == Qt::Key_Right
                || key == Qt::Key_Up || key == Qt::Key_Down
                || key == Qt::Key_Delete || key == Qt::Key_Backspace
-               || key == Qt::Key_Escape || key == Qt::Key_Plus){
+               || key == Qt::Key_Escape || key == Qt::Key_Plus
+               || key == Qt::Key_P){
         emit this->keyWasPressed(key, this->getIndexInGrid());
     }else if(key == Qt::Key_Minus || key == Qt::Key_Underscore){
         //underscore is Shift+MinusKey(-) on most keyboard layouts
@@ -272,6 +294,7 @@ void contentButton::titleAdjust(){
     if(pressedOK){
         qDebug() << "Input OK";
         this->setTitle(userInput);
+        this->saveJSON(); //ToDo optimize
     }
 
     qDebug() << "end: titleAdjust";
@@ -279,6 +302,7 @@ void contentButton::titleAdjust(){
 
 void contentButton::removeTitle(){
     this->setTitle("");
+    this->saveJSON(); //ToDo optimize
 }
 
 void contentButton::deleteThisButton(){
@@ -298,22 +322,30 @@ qsizetype contentButton::getIndexInGrid() const{
     return this->indexInGrid;
 };
 
+void contentButton::saveJSON(){
+    emit this->saveButtonChangesIntoJSON(); //ToDo (optimization) saveJSONforSingleButton (or similar) + decouple saving title & saving content
+}
+
 QString contentButton::getTitle() const{
     return this->title;
 }
 
-void contentButton::setTitle(QString title){
+void contentButton::setTitle(QString newTitle){
     qDebug() << "start: setButtonTitle";
-    if(title.length() > 0){
-        this->title = title;
-        this->newEditTitleAction.setText(this->textForEditTitleAct);
-        titleActionSeparator->setVisible(true);
-        removeTitleAction.setVisible(true);
+    if(this->title != newTitle){
+        if(newTitle.length() > 0){
+            this->title = newTitle;
+            this->newEditTitleAction.setText(this->textForEditTitleAct);
+            this->titleActionSeparator->setVisible(true);
+            this->removeTitleAction.setVisible(true);
+        }else{
+            this->title.clear();
+            this->newEditTitleAction.setText(this->textForNewTitleAct);
+            this->titleActionSeparator->setVisible(false);
+            this->removeTitleAction.setVisible(false);
+        }
     }else{
-        this->title.clear();
-        this->newEditTitleAction.setText(this->textForNewTitleAct);
-        titleActionSeparator->setVisible(false);
-        removeTitleAction.setVisible(false);
+        qDebug() << "Title has not changed.";
     }
     qDebug() << "end: setButtonTitle";
 }
@@ -326,9 +358,10 @@ QString contentButton::getContent() const{
     return this->content;
 }
 
-void contentButton::setContent(QString content){
+void contentButton::setContent(QString newContent){
     qDebug() << "start: setButtonContent";
-    this->content = content;
+
+    this->content = newContent;
 
     //ToDo check this part.. maybe create "updateText" function? Maybe use repaint? Think about this again if paintEvent is changed
     //this->setText(this->buttonTitle);
@@ -364,21 +397,6 @@ void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
     }
 }
 
-void contentButton::focusOutEvent(QFocusEvent *event){
-
-    qDebug() << "focusOutEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
-    qDebug() << "focusOutEvent ; index: " << this->getIndexInGrid();
-
-    QWidget::focusOutEvent(event);
-    qDebug() << "Reason: " << event->reason();
-
-    Qt::FocusReason r = event->reason();
-    if(r == Qt::MouseFocusReason || r == Qt::TabFocusReason
-        || r == Qt::BacktabFocusReason || r == Qt::OtherFocusReason){
-        this->unsetAsFocusedButton();
-    }
-}
-
 void contentButton::focusInEvent(QFocusEvent *event){
 
     qDebug() << "focusInEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
@@ -391,6 +409,21 @@ void contentButton::focusInEvent(QFocusEvent *event){
     if(r == Qt::MouseFocusReason || r == Qt::TabFocusReason
         || r == Qt::BacktabFocusReason || r == Qt::OtherFocusReason){
         this->setAsFocusedButton();
+    }
+}
+
+void contentButton::focusOutEvent(QFocusEvent *event){
+
+    qDebug() << "focusOutEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
+    qDebug() << "focusOutEvent ; index: " << this->getIndexInGrid();
+
+    QWidget::focusOutEvent(event);
+    qDebug() << "Reason: " << event->reason();
+
+    Qt::FocusReason r = event->reason();
+    if(r == Qt::MouseFocusReason || r == Qt::TabFocusReason
+        || r == Qt::BacktabFocusReason || r == Qt::OtherFocusReason){
+        this->unsetAsFocusedButton();
     }
 }
 

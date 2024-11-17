@@ -21,8 +21,10 @@ public:
 signals:
     void selProfileHasChanged(QString newProfileName);
     void newProfileCreated(QString newProfileName);
+    void cancelled();
 
 protected:
+    void closeEvent(QCloseEvent *event) override;
     void loadProfiles();
     void saveProfiles();
 

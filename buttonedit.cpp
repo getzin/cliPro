@@ -41,8 +41,9 @@ void buttonEdit::save(bool closeAtEnd){
     if(this->currentlyEditing == nullptr){
         qDebug() << "currently not editing a button.";
     }else{
-        this->currentlyEditing->setContent(this->ui->editContent->toPlainText());
-        this->currentlyEditing->setTitle(this->ui->editTitle->toPlainText());
+        this->currentlyEditing->setTitle(this->ui->editTitle->toPlainText()); //ToDo Optimize
+        this->currentlyEditing->setContent(this->ui->editContent->toPlainText()); //ToDo Optimize
+        this->currentlyEditing->saveJSON(); //ToDo optimize the JSON saving process (only single button) + decouple saving content/title
         this->currentlyEditing->repaint();
         if(closeAtEnd){
             this->close();

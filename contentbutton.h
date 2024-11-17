@@ -24,18 +24,21 @@ public:
     bool isFocused() const;
     void gainFocus();
     void unsetAsFocusedButton();
+    void unsetAsLastUnfocusedButton();
     static void clearFocusedButton();
     static bool isAnyButtonInFocus();
+    static void restoreLastUnfocusedButtonToFocusedButton();
+    static void clearLastUnfocusedButton();
 
     void setIndexInGrid(qsizetype index);
     qsizetype getIndexInGrid() const;
 
+    void saveJSON();
     QString getTitle() const;
-    void setTitle(QString title);
+    void setTitle(QString newTitle);
     bool hasTitle() const;
-
     QString getContent() const;
-    void setContent(QString content);
+    void setContent(QString newContent);
 
 
 signals:
@@ -43,6 +46,8 @@ signals:
     void deleteButton(qsizetype indexOfSender);
     void keyWasPressed(int key, qsizetype indexOfSender);
     void startContentButtonEdit(qsizetype indexOfSender);
+
+    void saveButtonChangesIntoJSON(); //ToDo for editing content and adding/editing/removing title
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -89,8 +94,9 @@ private:
     bool markedForDeletion = false;
 
     static contentButton *focusedButton;
-    static int constexpr minButtonSize_w = 10;
-    static int constexpr minButtonSize_h = 10;
+    static contentButton *lastUnfocusedButton;
+    static int constexpr minButtonSize_w = 70;
+    static int constexpr minButtonSize_h = 70;
 
     static QString const textForNewTitleAct;
     static QString const textForEditTitleAct;
@@ -98,8 +104,6 @@ private:
     static QString const textForMarkDeletionAct;
     static QString const textForUnmarkDeletionAct;
     static QString const textForDeleteButton;
-
-
 };
 
 #endif // CONTENTBUTTON_H

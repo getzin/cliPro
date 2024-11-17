@@ -1,6 +1,7 @@
-#ifndef APPSETTINGS_H
-#define APPSETTINGS_H
+#ifndef APPUTILS_H
+#define APPUTILS_H
 
+#include <QWidget>
 #include <QString>
 
 namespace appSettings{
@@ -19,4 +20,8 @@ inline QString const settingsValProfilesList = "profiles_list";
 inline QString const settingsValCurrProfileID = "current_profile_id";
 }
 
-#endif // APPSETTINGS_H
+int constexpr defaultPopUpTimer = 3000; //ms
+void timedPopUp(QWidget *parent, int timer_ms, QString message);
+bool indexIsInBounds(qsizetype index, qsizetype upperBound);
+
+#endif // APPUTILS_H

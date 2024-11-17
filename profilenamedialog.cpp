@@ -3,7 +3,7 @@
 
 #include <QKeyEvent>
 
-#include "timedpopup.h"
+#include "apputils.h"
 
 profileNameDialog::profileNameDialog(QWidget *parent)
     : QDialog(parent)

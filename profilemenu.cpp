@@ -7,8 +7,7 @@
 #include <QDir>
 #include <QSettings>
 
-#include "appsettings.h"
-#include "timedpopup.h"
+#include "apputils.h"
 
 profileMenu::profileMenu(QWidget *parent)
     : QDialog(parent)
@@ -73,8 +72,7 @@ void profileMenu::constructVisibleListFromInternal(){
     qDebug() << "Size of visibleProfileList: " << this->ui->visibleProfileList->count();
 
     //check that the currSelectedProfileID lies within our now inited profiles list
-    //ToDo index check function
-    if((this->lastSavedSelProfileID >= 0) && (this->lastSavedSelProfileID < this->ui->visibleProfileList->count())){
+    if(indexIsInBounds(this->lastSavedSelProfileID, this->ui->visibleProfileList->count())){
         qDebug() << "ID (" << this->lastSavedSelProfileID << ") lies in in-bounds. Set it!";
         this->ui->visibleProfileList->setCurrentRow(this->lastSavedSelProfileID);
     }else{
@@ -98,8 +96,7 @@ void profileMenu::saveVisibleListToInternal(){
     if(visibleProfileCnt >= 0){
         if(!(this->ui->visibleProfileList->selectedItems().empty())){
             qsizetype currSelRow = this->ui->visibleProfileList->currentRow();
-            //ToDo index check function
-            if(currSelRow >= 0 && currSelRow < visibleProfileCnt){
+            if(indexIsInBounds(currSelRow, visibleProfileCnt)){
                 indexOK = true;
                 qDebug() << "id (" << currSelRow << ") lies in in-bounds. Set lastSavedSelProfileID to: " << currSelRow;
                 this->lastSavedSelProfileID = currSelRow;
@@ -179,8 +176,7 @@ void profileMenu::saveProfiles(){
             qDebug() << "tmpValForCurrSelID: " << tmpValForCurrSelID;
 
             //check that index is in bounds
-            //ToDo index check function
-            if(tmpValForCurrSelID >= 0 && tmpValForCurrSelID < tmpListSize){
+            if(indexIsInBounds(tmpValForCurrSelID, tmpListSize)){
                 indexOK = true;
                 qDebug() << "index is in-bounds, good!";
                 settings.setValue(appSettings::settingsValCurrProfileID, QString::number(tmpValForCurrSelID));
@@ -233,7 +229,7 @@ void profileMenu::deleteButtonPressed(){
     if(reply == QMessageBox::Yes){
         int currRow = this->ui->visibleProfileList->currentRow();
 
-        if(currRow >= 0 && currRow < this->ui->visibleProfileList->count()){
+        if(indexIsInBounds(currRow, this->ui->visibleProfileList->count())){
             QListWidgetItem* itemToDelete = this->ui->visibleProfileList->takeItem(currRow);
             QString delName = itemToDelete->text();
             this->unsavedActions.append(profAction{delName, ""});
@@ -253,6 +249,7 @@ void profileMenu::cancelButtonPressed(){
     this->constructVisibleListFromInternal();
     this->unsavedActions.clear();
     this->close();
+    emit this->cancelled();
 }
 
 QString profileMenu::constructFilePathForProfileJson(QString profileName){
@@ -330,8 +327,8 @@ void profileMenu::saveButtonPressed(){
 
     //emit signal with new profile name?
     qDebug() << "lastSavedSelProfileID: " << lastSavedSelProfileID;
-    //ToDo index check function
-    if(this->lastSavedSelProfileID >= 0 && lastSavedSelProfileID < this->internalProfilesList.count()){
+
+    if(indexIsInBounds(this->lastSavedSelProfileID, this->internalProfilesList.count())){
         emit this->selProfileHasChanged(this->internalProfilesList.at(this->lastSavedSelProfileID));
     }else{
         qDebug() << "lastSavedSelProfileID was invalid";
@@ -354,8 +351,7 @@ void profileMenu::handleNewProfileCreation(QString newName){
 }
 
 QString profileMenu::getCurrSelProfileName() const{
-    //ToDo index check function
-    if(this->lastSavedSelProfileID >= 0 && this->lastSavedSelProfileID < this->internalProfilesList.count()){
+    if(indexIsInBounds(this->lastSavedSelProfileID, this->internalProfilesList.count())){
         return this->internalProfilesList.at(this->lastSavedSelProfileID);
     }else{
         return "";
@@ -382,4 +378,9 @@ void profileMenu::setEditDelEnabled(){
 void profileMenu::setEditDelDisabled(){
     this->ui->btnEdit->setDisabled(true);
     this->ui->btnDelete->setDisabled(true);
+}
+
+void profileMenu::closeEvent(QCloseEvent *event){
+    Q_UNUSED(event)
+    this->cancelButtonPressed();
 }
