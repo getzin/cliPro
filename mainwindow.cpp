@@ -68,6 +68,14 @@ MainWindow::MainWindow(QWidget *parent)
     this->setUpUnmarkAllBtn();
     this->fixTabOrder();
 
+    this->ui->hSpace1->changeSize(10,0);
+    this->ui->hSpace2->changeSize(5,0);
+    this->ui->buttonInfo->setToolTipDuration(INT_MAX);
+    this->ui->buttonInfo->setCheckable(false);
+    this->ui->buttonInfo->setFocusPolicy(Qt::NoFocus);
+    this->ui->profileLabel->setFocusPolicy(Qt::NoFocus);
+    this->ui->centralwidget->setFocusPolicy(Qt::ClickFocus);
+
     //will become "enabled" as soon as there is input in the input field
     this->ui->buttonAdd->setDisabled(true);
     this->ui->buttonSearch->setDisabled(true);
@@ -133,7 +141,7 @@ void MainWindow::loadAppSettings(){
     int width = settings.value(appSettings::settingsValMWWidth).toInt(&width_ok);
     int height = settings.value(appSettings::settingsValMWHeight).toInt(&height_ok);
 
-    if(!pos_x || !pos_y_ok){
+    if(!pos_x_ok || !pos_y_ok){
         qDebug() << "Read positions values not OK. Move window to (0,0).";
         if(QGuiApplication::screens().count() == 1){
             //place window in center, if either value is not OK
@@ -151,11 +159,11 @@ void MainWindow::loadAppSettings(){
     }
     this->move(pos_x, pos_y);
 
-    if(!width_ok){
+    if(!width_ok || width < this->minWindowSize_w){
         qDebug() << "read width not OK. Set default value.";
         width = this->defaultWindowSize_w;
     }
-    if(!height_ok){
+    if(!height_ok || height < this->minWindowSize_h){
         qDebug() << "read height not OK. Set default value.";
         height = this->defaultWindowSize_h;
     }
@@ -254,8 +262,6 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
     connect(newContentBtn, SIGNAL(deleteButton(qsizetype)), this, SLOT(processSingleButtonDeletion(qsizetype)));
     connect(newContentBtn, SIGNAL(saveButtonChangesIntoJSON()), this, SLOT(saveCurrentButtonsAsJson()));
     qDebug() << "everything has been connected!";
-
-    // return newContentBtn;
 }
 
 void MainWindow::loadButtonsFromJson(){
@@ -560,6 +566,7 @@ void MainWindow::processMinusKey(){
 
 void MainWindow::processEscapeKey(){
     contentButton::clearFocusedButton();
+    contentButton::clearLastUnfocusedButton();
     this->unmarkAllContentButtons();
 }
 

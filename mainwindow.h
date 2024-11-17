@@ -85,11 +85,11 @@ private:
 
     QPushButton unmarkAllBtn;
 
-    static int constexpr stretchOfUnmarkAllBtn = 26; //this value has to be determined empirically
+    static int constexpr stretchOfUnmarkAllBtn = 28; //this value has to be determined empirically
         //(it's roughly equal to the stretch of the inputField+addBtn+searchBtn+a bit more for each spacing between the 3)
 
     static qsizetype constexpr maxItemsPerRow = 4;
-    static int constexpr minWindowSize_w = 500;
+    static int constexpr minWindowSize_w = 550;
     static int constexpr minWindowSize_h = 200;
     static int constexpr defaultWindowSize_w = 800;
     static int constexpr defaultWindowSize_h = 400;
