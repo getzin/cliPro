@@ -11,8 +11,13 @@
 #include <QSizeGrip>
 #include <QDir>
 #include <QKeyEvent>
+#include <QClipboard>
+#include <QMimeData>
 
 #include "apputils.h"
+
+const QClipboard *MainWindow::clipboard = nullptr;
+const QMimeData *MainWindow::mimeData = nullptr;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -60,8 +65,8 @@ MainWindow::MainWindow(QWidget *parent)
         this->setDisplayedProfileName(this->currSelectedProfileName);
     }
 
-    this->addDynBtnAtEndOfContentButtons();
     this->setUpUnmarkAllBtn();
+    this->addDynBtnAtEndOfContentButtons();
     this->fixTabOrder();
 
     this->ui->hSpace1->changeSize(10,0);
@@ -94,6 +99,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this->ui->buttonAdd, SIGNAL(clicked()), this, SLOT(processActionForAddButton()));
     connect(this->ui->buttonSearch, SIGNAL(clicked()), this, SLOT(processActionForSearchButton()));
     connect(this->ui->textInputField, SIGNAL(textChanged(QString)), this, SLOT(processTextFieldChange(QString)));
+
+    if(!clipboard){ clipboard = QApplication::clipboard(); }
+    if(!mimeData){ mimeData = clipboard->mimeData(); }
+    connect(clipboard, SIGNAL(dataChanged()), this, SLOT(processClipBoard()));
+    this->processClipBoard(); //process initial clipboard
 }
 
 MainWindow::~MainWindow()
@@ -171,20 +181,19 @@ void MainWindow::saveAppSettings(){
     settings.beginGroup(appSettings::settingsGroupMainWindow);
     settings.setValue(appSettings::settingsValMWWidth, QString::number(this->width()));
     settings.setValue(appSettings::settingsValMWHeight, QString::number(this->height()));
-
     settings.setValue(appSettings::settingsValMWPosX, QString::number(this->pos().x()));
     settings.setValue(appSettings::settingsValMWPosY, QString::number(this->pos().y()));
-
     settings.endGroup();
 }
 
 void MainWindow::setUpUnmarkAllBtn(){
     qDebug() << "start: setUpUnmarkAllBtn";
 
-    //not visible at first
     this->unmarkAllBtn.setText("Cancel: Do not delete selected buttons");
     this->unmarkAllBtn.setStyleSheet("color: darkgreen; border: 1px solid lightgreen; border-radius: 30%; font-weight: bold;"
                                       "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f6ffed, stop:1 #edfff4)");
+
+    //not visible at first
     this->unmarkAllBtn.hide();
     this->ui->layoutAtTop->addWidget(&(this->unmarkAllBtn));
 
@@ -922,4 +931,30 @@ void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
 void MainWindow::profMenuCancel(){
     qDebug() << "cancelled!";
     contentButton::restoreLastUnfocusedButtonToFocusedButton();
+}
+
+void MainWindow::enablePasteForAllButtons(){
+    for(int i = 0; i < this->contentBtnList.size(); ++i){
+        this->contentBtnList.at(i)->enablePasteContent();
+    }
+}
+
+void MainWindow::disablePasteForAllButtons(){
+    for(int i = 0; i < this->contentBtnList.size(); ++i){
+        this->contentBtnList.at(i)->disablePasteContent();
+    }
+}
+
+void MainWindow::processClipBoard(){
+    qDebug() << "start: processClipBoard";
+    if(this->mimeData->hasText()){
+        qDebug() << "Clipboard data is text.";
+        this->enablePasteForAllButtons();
+    }else if(mimeData->hasImage()){
+        qDebug() << "Clipboard data is image.";
+        //ToDo (image paste implementation pending, for now disable pasting)
+        this->disablePasteForAllButtons();
+    }else{
+        this->disablePasteForAllButtons();
+    }
 }

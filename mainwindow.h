@@ -44,6 +44,7 @@ private slots:
     void processTextFieldChange(QString);
     void processSingleButtonDeletion(qsizetype indexOfSender);
     void profMenuCancel();
+    void processClipBoard();
 
 private:
     void fixTabOrder();
@@ -71,6 +72,9 @@ private:
     void doDefaultFocus();
     void processArrowKeyPress(int key, qsizetype indexOfSender);
     void setUpUnmarkAllBtn();
+    void enablePasteForAllButtons();
+    void disablePasteForAllButtons();
+
 
     Ui::MainWindow *ui;
     QVector<contentButton*> contentBtnList;
@@ -83,6 +87,9 @@ private:
     QString pathToFileForSelectedProfile; //ToDo rethink this variable / maybe move to profMenu and use getter/setter in all places
 
     QPushButton unmarkAllBtn;
+
+    static const QClipboard *clipboard;
+    static const QMimeData *mimeData;
 
     static int constexpr stretchOfUnmarkAllBtn = 28; //this value has to be determined empirically
         //(it's roughly equal to the stretch of the inputField+addBtn+searchBtn+a bit more for each spacing between the 3)

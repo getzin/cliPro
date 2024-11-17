@@ -33,6 +33,11 @@ public:
     void setIndexInGrid(qsizetype index);
     qsizetype getIndexInGrid() const;
 
+    void enableCopyContent();
+    void disableCopyContent();
+    void enablePasteContent();
+    void disablePasteContent();
+
     void saveJSON();
     QString getTitle() const;
     void setTitle(QString newTitle);
@@ -59,6 +64,8 @@ protected:
 
 private slots:
     void titleAdjust();
+    void copyContentToClipboard();
+    void pasteContentFromClipboard();
     void removeTitle();
     void switchMarkedForDeletion();
     void deleteThisButton();
@@ -84,9 +91,13 @@ private:
     QMenu optionsMenu; //right-click menu (can be opened via keyboard too)
     QAction newEditTitleAction;
     QAction removeTitleAction;
+    QAction copyContentAction;
+    QAction pasteContentAction;
     QAction markForDeleteAction;
     QAction deleteButtonAction;
-    QAction* titleActionSeparator; //we enable/disable this separator depending on button state
+    QAction* removeTitleActionSeparator; //we enable/disable this separator depending on button state
+    QAction* copyContentActionSeparator; //we enable/disable this separator depending on button content
+    QAction* pasteContentActionSeparator; //we enable/disable this separator depending on clipboard content
 
     qsizetype indexInGrid = -1;
     QString title;
@@ -101,6 +112,8 @@ private:
     static QString const textForNewTitleAct;
     static QString const textForEditTitleAct;
     static QString const textForRemoveTitleAct;
+    static QString const textForCopyContentAct;
+    static QString const textForPasteContentAct;
     static QString const textForMarkDeletionAct;
     static QString const textForUnmarkDeletionAct;
     static QString const textForDeleteButton;

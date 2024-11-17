@@ -1,4 +1,5 @@
 #include "contentbutton.h"
+#include "apputils.h"
 
 #include <QSizePolicy>
 #include <QDebug>
@@ -17,6 +18,8 @@ contentButton* contentButton::lastUnfocusedButton = nullptr;
 QString const contentButton::textForNewTitleAct = "Add title";
 QString const contentButton::textForEditTitleAct = "Edit title";
 QString const contentButton::textForRemoveTitleAct = "Remove title";
+QString const contentButton::textForCopyContentAct = "Copy content";
+QString const contentButton::textForPasteContentAct = "Paste content";
 QString const contentButton::textForMarkDeletionAct = "Mark for deletion";
 QString const contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
 QString const contentButton::textForDeleteButton = "Delete button";
@@ -25,6 +28,8 @@ contentButton::contentButton(QWidget *parent)
     : QPushButton(parent),
     newEditTitleAction(this->textForNewTitleAct, this),
     removeTitleAction(this->textForRemoveTitleAct, this),
+    copyContentAction(this->textForCopyContentAct, this),
+    pasteContentAction(this->textForPasteContentAct, this),
     markForDeleteAction(this->textForMarkDeletionAct, this),
     deleteButtonAction(this->textForDeleteButton, this)
 {
@@ -38,18 +43,39 @@ contentButton::contentButton(QWidget *parent)
     this->setIndexInGrid(contentBtnCount::getTotalCnt() - 1);
 
     //---MENU---
+    //add/edit title
     this->optionsMenu.addAction(&(this->newEditTitleAction));
-    this->titleActionSeparator = this->optionsMenu.addSeparator();
-    this->titleActionSeparator->setVisible(false);
+
+    //remove title
+    this->removeTitleActionSeparator = this->optionsMenu.addSeparator();
+    this->removeTitleActionSeparator->setVisible(false);
     this->optionsMenu.addAction(&(this->removeTitleAction));
     this->removeTitleAction.setVisible(false);
+
+    //copy content
+    this->copyContentActionSeparator = this->optionsMenu.addSeparator();
+    this->copyContentActionSeparator->setVisible(false);
+    this->optionsMenu.addAction(&(this->copyContentAction));
+    this->copyContentAction.setVisible(false);
+
+    //paste content
+    this->pasteContentActionSeparator = this->optionsMenu.addSeparator();
+    this->pasteContentActionSeparator->setVisible(false);
+    this->optionsMenu.addAction(&(this->pasteContentAction));
+    this->pasteContentAction.setVisible(false);
+
+    //mark for deletion
     this->optionsMenu.addSeparator();
     this->optionsMenu.addAction(&(this->markForDeleteAction));
+
+    //delete button
     this->optionsMenu.addSeparator();
     this->optionsMenu.addAction(&(this->deleteButtonAction));
 
     //---qt connects---
     connect(&(this->newEditTitleAction), SIGNAL(triggered()), this, SLOT(titleAdjust()));
+    connect(&(this->copyContentAction), SIGNAL(triggered()), this, SLOT(copyContentToClipboard()));
+    connect(&(this->pasteContentAction), SIGNAL(triggered()), this, SLOT(pasteContentFromClipboard()));
     connect(&(this->removeTitleAction), SIGNAL(triggered()), this, SLOT(removeTitle()));
     connect(&(this->markForDeleteAction), SIGNAL(triggered()), this, SLOT(switchMarkedForDeletion()));
     connect(&(this->deleteButtonAction), SIGNAL(triggered()), this, SLOT(deleteThisButton()));
@@ -235,26 +261,9 @@ void contentButton::keyPressEvent(QKeyEvent *event){
             emit this->startContentButtonEdit(this->getIndexInGrid());
         }
     }else if(key == Qt::Key_C){
-        QGuiApplication::clipboard()->setText(this->content);
+        this->copyContentToClipboard();
     }else if(key == Qt::Key_V){
-        bool save = true;
-        if(this->getContent().length() > 0){
-            qDebug() << "There already is text!";
-            QMessageBox::StandardButton reply;
-
-            reply = QMessageBox::question(this, "Override Confirmation",
-                                          "Do you really want to override the existing content for this button?"
-                                          "<br><br><i>(WARNING: This is irreversible)</i>",
-                                          QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
-            if(reply == QMessageBox::No){
-                save = false;
-            }
-        }
-        if(save){
-            this->setContent(QGuiApplication::clipboard()->text());
-            this->saveJSON();
-            this->repaint();
-        }
+        this->pasteContentFromClipboard();
     }else if(key == Qt::Key_Left || key == Qt::Key_Right
                || key == Qt::Key_Up || key == Qt::Key_Down
                || key == Qt::Key_Delete || key == Qt::Key_Backspace
@@ -300,6 +309,72 @@ void contentButton::titleAdjust(){
     qDebug() << "end: titleAdjust";
 }
 
+void contentButton::copyContentToClipboard(){
+    if(this->content.length() > 0){
+        QGuiApplication::clipboard()->setText(this->content);
+    }else{
+        timedPopUp(this,defaultShortPopUpTimer,"Button content is empty.<br>Will not copy to clipboard.");
+    }
+}
+
+void contentButton::pasteContentFromClipboard(){
+    bool save = true;
+    QString textToPaste = QGuiApplication::clipboard()->text();
+    if(textToPaste.length() > 0){
+        if(this->getContent().length() > 0){
+            qDebug() << "There already is text!";
+            QMessageBox::StandardButton reply;
+
+            reply = QMessageBox::question(this, "Override Confirmation",
+                                          "Do you really want to override the existing content for this button?"
+                                          "<br><br><i>(WARNING: This is irreversible)</i>",
+                                          QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
+            if(reply == QMessageBox::No){
+                save = false;
+            }
+        }
+        if(save){
+            this->setContent(QGuiApplication::clipboard()->text());
+            this->saveJSON();
+            this->repaint();
+        }
+    }else{
+        timedPopUp(this,defaultShortPopUpTimer,"Clipboard does not have any text data.<br>Button content won't be overwritten.");
+    }
+}
+
+void contentButton::enableCopyContent(){
+    qDebug() << "start: Enable text copying.";
+    this->copyContentAction.setVisible(true);
+    if(copyContentActionSeparator){
+        this->copyContentActionSeparator->setVisible(true);
+    }
+}
+
+void contentButton::disableCopyContent(){
+    qDebug() << "start: Disable text copying.";
+    this->copyContentAction.setVisible(false);
+    if(copyContentActionSeparator){
+        this->copyContentActionSeparator->setVisible(false);
+    }
+}
+
+void contentButton::enablePasteContent(){
+    qDebug() << "start: Enable text pasting.";
+    this->pasteContentAction.setVisible(true);
+    if(pasteContentActionSeparator){
+        this->pasteContentActionSeparator->setVisible(true);
+    }
+}
+
+void contentButton::disablePasteContent(){
+    qDebug() << "start: Disable text pasting.";
+    this->pasteContentAction.setVisible(false);
+    if(pasteContentActionSeparator){
+        this->pasteContentActionSeparator->setVisible(false);
+    }
+}
+
 void contentButton::removeTitle(){
     this->setTitle("");
     this->saveJSON(); //ToDo optimize
@@ -336,13 +411,17 @@ void contentButton::setTitle(QString newTitle){
         if(newTitle.length() > 0){
             this->title = newTitle;
             this->newEditTitleAction.setText(this->textForEditTitleAct);
-            this->titleActionSeparator->setVisible(true);
             this->removeTitleAction.setVisible(true);
+            if(removeTitleActionSeparator){
+                this->removeTitleActionSeparator->setVisible(true);
+            }
         }else{
             this->title.clear();
             this->newEditTitleAction.setText(this->textForNewTitleAct);
-            this->titleActionSeparator->setVisible(false);
             this->removeTitleAction.setVisible(false);
+            if(removeTitleActionSeparator){
+                this->removeTitleActionSeparator->setVisible(false);
+            }
         }
     }else{
         qDebug() << "Title has not changed.";
@@ -362,6 +441,12 @@ void contentButton::setContent(QString newContent){
     qDebug() << "start: setButtonContent";
 
     this->content = newContent;
+
+    if(this->content.length() > 0){
+        this->enableCopyContent();
+    }else{
+        this->disableCopyContent();
+    }
 
     //ToDo check this part.. maybe create "updateText" function? Maybe use repaint? Think about this again if paintEvent is changed
     //this->setText(this->buttonTitle);
