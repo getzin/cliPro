@@ -2,7 +2,9 @@
 
 #include <QKeyEvent>
 
-dynAddRmButton::dynAddRmButton(btnMode mode) {
+dynAddRmButton::dynAddRmButton(QWidget *parent)
+    : QPushButton(parent)
+{
     qDebug() << "dynAddRmButton --- ctor";
     // QFont font(QString("Noto Sans"), 30, 5, false);
     QFont font("Monospace");
@@ -13,7 +15,7 @@ dynAddRmButton::dynAddRmButton(btnMode mode) {
 
     this->setFont(font);
     this->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
-    this->setMode(mode);
+    this->setMode(btnModeADD);
 }
 
 dynAddRmButton::~dynAddRmButton() {

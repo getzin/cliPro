@@ -17,6 +17,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , dynBtn(this)
     , profMenu(this)
     , btnEdit(this)
     , unmarkAllBtn(this)
@@ -26,9 +27,6 @@ MainWindow::MainWindow(QWidget *parent)
     this->setFocusPolicy(Qt::StrongFocus); //without this, arrow keys do not work
     this->setMinimumSize(this->minWindowSize_w, this->minWindowSize_h);
     this->loadAppSettings();
-
-    //CREATE dynamic +/- button, BEFORE(!) loadButtonsFromJson
-    this->dynBtn = new dynAddRmButton(dynAddRmButton::btnModeADD);
 
     this->currSelectedProfileName = profMenu.getCurrSelProfileName();
     qDebug() << "currSelectedProfileName: " << currSelectedProfileName;
@@ -62,8 +60,6 @@ MainWindow::MainWindow(QWidget *parent)
         this->setDisplayedProfileName(this->currSelectedProfileName);
     }
 
-    qDebug() << "dynBtn exists?" << (this->dynBtn == nullptr ? true : false);
-
     this->addDynBtnAtEndOfContentButtons();
     this->setUpUnmarkAllBtn();
     this->fixTabOrder();
@@ -85,9 +81,9 @@ MainWindow::MainWindow(QWidget *parent)
     this->ui->scrollGrid->setHorizontalSpacing(scrollGridSpacing_h);
     this->ui->scrollGrid->setVerticalSpacing(scrollGridSpacing_v);
 
-    connect(this->dynBtn, SIGNAL(released()), this, SLOT(processDynBtnMainAction()));
-    connect(this->dynBtn, SIGNAL(keyPressOnDynBtn(int)), this, SLOT(processDynBtnKeyPress(int)));
-    connect(this->dynBtn, SIGNAL(mainWindowButtonsNeedSwitch(dynAddRmButton::btnMode)), this, SLOT(adjustButtons(dynAddRmButton::btnMode)));
+    connect(&(this->dynBtn), SIGNAL(released()), this, SLOT(processDynBtnMainAction()));
+    connect(&(this->dynBtn), SIGNAL(keyPressOnDynBtn(int)), this, SLOT(processDynBtnKeyPress(int)));
+    connect(&(this->dynBtn), SIGNAL(mainWindowButtonsNeedSwitch(dynAddRmButton::btnMode)), this, SLOT(adjustButtons(dynAddRmButton::btnMode)));
 
     connect(&(this->profMenu), SIGNAL(selProfileHasChanged(QString)), this, SLOT(updateButtonsForProfileChange(QString)));
     connect(&(this->profMenu), SIGNAL(newProfileCreated(QString)), this, SLOT(createDefaultJsonForNewProfile(QString)));
@@ -104,7 +100,6 @@ MainWindow::~MainWindow()
 {
     this->saveAppSettings();
     this->saveCurrentButtonsAsJson();
-    delete this->dynBtn;
     delete this->ui;
 }
 
@@ -122,9 +117,9 @@ void MainWindow::fixTabOrder(){
             qDebug() << "i : " << i;
             QWidget::setTabOrder(this->contentBtnList.at(i), this->contentBtnList.at(i+1));
         }
-        QWidget::setTabOrder(this->contentBtnList.last(), this->dynBtn);
+        QWidget::setTabOrder(this->contentBtnList.last(), &(this->dynBtn));
     }else{
-        QWidget::setTabOrder(&(this->unmarkAllBtn), this->dynBtn);
+        QWidget::setTabOrder(&(this->unmarkAllBtn), &(this->dynBtn));
     }
     qDebug() << "end: Fix Tab order";
 }
@@ -201,19 +196,6 @@ void MainWindow::addDynBtnAtEndOfContentButtons(){
 
     qDebug() << "start: addDynBtnAtEndOfContentButtons";
 
-    // //ToDo check if this part is actually needed (might be an artifact of older code)
-    // if(this->unmarkAllBtn){
-    //     //ToDo.. takeAt from widget?
-    //     delete this->unmarkAllBtn;
-    //     this->setUpUnmarkAllBtn();
-    // }
-
-    if(this->dynBtn == nullptr){
-        qDebug() << "dynBtn is nullptr, exit!";
-        exit(1);
-    }else{
-        qDebug() << "dnyBtn is OK";
-    }
     qsizetype currItemCount = this->contentBtnList.count();
     qDebug() << "currItemCount: " << currItemCount;
 
@@ -221,7 +203,7 @@ void MainWindow::addDynBtnAtEndOfContentButtons(){
     qsizetype col4dynBtn = (currItemCount) % this->maxItemsPerRow;
     qDebug() << "row/col: " << row4dynBtn << col4dynBtn;
 
-    this->ui->scrollGrid->addWidget(this->dynBtn, row4dynBtn, col4dynBtn);
+    this->ui->scrollGrid->addWidget(&(this->dynBtn), row4dynBtn, col4dynBtn);
     qDebug() << "dynBtn added to widget";
 
     qDebug() << "count: " << ui->scrollGrid->count()
@@ -230,10 +212,10 @@ void MainWindow::addDynBtnAtEndOfContentButtons(){
 
     if(contentBtnCount::getMarkedForDelCnt() > 0){
         qDebug() << "MODE >> RM!";
-        this->dynBtn->setMode(dynAddRmButton::btnModeRM);
+        this->dynBtn.setMode(dynAddRmButton::btnModeRM);
     }else{
         qDebug() << "MODE >> ADD!";
-        this->dynBtn->setMode(dynAddRmButton::btnModeADD);
+        this->dynBtn.setMode(dynAddRmButton::btnModeADD);
     }
 }
 
@@ -256,7 +238,7 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
     this->contentBtnList.append(newContentBtn);
     qDebug() << "Added to contentBtnList";
 
-    connect(newContentBtn, SIGNAL(dynBtnSetMode(dynAddRmButton::btnMode)), this->dynBtn, SLOT(setMode(dynAddRmButton::btnMode)));
+    connect(newContentBtn, SIGNAL(dynBtnSetMode(dynAddRmButton::btnMode)), &(this->dynBtn), SLOT(setMode(dynAddRmButton::btnMode)));
     connect(newContentBtn, SIGNAL(keyWasPressed(int,qsizetype)), this, SLOT(processContentButtonKeyPress(int,qsizetype)));
     connect(newContentBtn, SIGNAL(startContentButtonEdit(qsizetype)), this, SLOT(startButtonEdit(qsizetype)));
     connect(newContentBtn, SIGNAL(deleteButton(qsizetype)), this, SLOT(processSingleButtonDeletion(qsizetype)));
@@ -441,8 +423,8 @@ void MainWindow::unmarkAllContentButtons(){
     for(qsizetype i = 0; i < contentBtnCount::getTotalCnt(); ++i){
         this->contentBtnList.at(i)->unsetMarkedForDeletion();
     }
-    if(this->dynBtn->getCurrBtnMode() == dynAddRmButton::btnModeRM){
-        this->dynBtn->setMode(dynAddRmButton::btnModeADD);
+    if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeRM){
+        this->dynBtn.setMode(dynAddRmButton::btnModeADD);
         contentButton::restoreLastUnfocusedButtonToFocusedButton();
     }
 }
@@ -450,7 +432,7 @@ void MainWindow::unmarkAllContentButtons(){
 void MainWindow::doDefaultFocus(){
     if(this->contentBtnList.empty()){
         //if the contentBtnList is empty, set the focus on the dynBtn
-        this->dynBtn->setFocus();
+        this->dynBtn.setFocus();
     }else{
         //if list is not empty, just set the focus on the first button
         this->contentBtnList.at(0)->gainFocus();
@@ -537,7 +519,7 @@ void MainWindow::processSingleButtonDeletion(qsizetype indexOfSender){
         if(indexIsInBounds(indexOfSender, this->contentBtnList.size())){
             this->contentBtnList.at(indexOfSender)->gainFocus();
         }else{
-            this->dynBtn->setFocus();
+            this->dynBtn.setFocus();
         }
 
     }else if(reply == QMessageBox::No){
@@ -586,9 +568,9 @@ void MainWindow::processRemainingKeys(int key){
 }
 
 void MainWindow::processDynBtnMainAction(){
-    if(this->dynBtn->getCurrBtnMode() == dynAddRmButton::btnModeADD){
+    if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeADD){
         this->processAddANewButton("");
-    }else if(this->dynBtn->getCurrBtnMode() == dynAddRmButton::btnModeRM){
+    }else if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeRM){
         this->processRemoveAllMarkedButtons();
     }else{
         qDebug() << "current button mode is invalid.";
@@ -816,7 +798,7 @@ void MainWindow::processRemoveAllMarkedButtons(){
 
         this->removeAllButtonsThatAreMarkedForDel();
         this->saveCurrentButtonsAsJson();
-        // this->dynBtn->switchMode();
+        // this->dynBtn.switchMode();
 
     }else if(reply == QMessageBox::No){
         qDebug() << "No clicked";
@@ -881,7 +863,7 @@ void MainWindow::updateButtonsForProfileChange(QString profileName){
             qDebug() << "count of contentBtnList: " << this->contentBtnList.count();
             qDebug() << "count of scrollGrid items: " << this->ui->scrollGrid->count();
 
-            this->dynBtn->setMode(dynAddRmButton::btnModeADD);
+            this->dynBtn.setMode(dynAddRmButton::btnModeADD);
             this->setDisplayedProfileName(this->currSelectedProfileName);
         }
     }
@@ -910,7 +892,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event){
     contentButton::clearFocusedButton();
     contentButton::clearLastUnfocusedButton();
     if(this->contentBtnList.empty()){
-        this->dynBtn->setFocus();
+        this->dynBtn.setFocus();
     }else{
         this->ui->centralwidget->setFocus();
     }

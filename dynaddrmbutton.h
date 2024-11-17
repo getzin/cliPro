@@ -12,7 +12,7 @@ public:
         btnModeADD = 0,
         btnModeRM = 1,
     };
-    explicit dynAddRmButton(btnMode mode = btnModeADD);
+    explicit dynAddRmButton(QWidget *parent);
     ~dynAddRmButton();
     btnMode getCurrBtnMode() const;
 

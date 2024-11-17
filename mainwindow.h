@@ -75,8 +75,7 @@ private:
     Ui::MainWindow *ui;
     QVector<contentButton*> contentBtnList;
 
-    dynAddRmButton *dynBtn = nullptr; //ToDo non-pointer
-
+    dynAddRmButton dynBtn;
     profileMenu profMenu;
     buttonEdit btnEdit;
 
