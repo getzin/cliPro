@@ -22,7 +22,8 @@ QString const contentButton::textForCopyContentAct = "Copy content";
 QString const contentButton::textForPasteContentAct = "Paste content";
 QString const contentButton::textForMarkDeletionAct = "Mark for deletion";
 QString const contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
-QString const contentButton::textForDeleteButton = "Delete button";
+QString const contentButton::textForDeleteAllMarkedAct = "Delete ALL marked";
+QString const contentButton::textForDeleteButton = "Delete this button";
 
 contentButton::contentButton(QWidget *parent)
     : QPushButton(parent),
@@ -31,6 +32,7 @@ contentButton::contentButton(QWidget *parent)
     copyContentAction(this->textForCopyContentAct, this),
     pasteContentAction(this->textForPasteContentAct, this),
     markForDeleteAction(this->textForMarkDeletionAct, this),
+    deleteAllMarkedAction(this->textForDeleteAllMarkedAct, this),
     deleteButtonAction(this->textForDeleteButton, this)
 {
     this->setMinimumSize(this->minButtonSize_w, this->minButtonSize_h);
@@ -68,7 +70,13 @@ contentButton::contentButton(QWidget *parent)
     this->optionsMenu.addSeparator();
     this->optionsMenu.addAction(&(this->markForDeleteAction));
 
-    //delete button
+    //delete all marked buttons
+    this->deleteAllMarkedActionSeparator = this->optionsMenu.addSeparator();
+    this->deleteAllMarkedActionSeparator->setVisible(false);
+    this->optionsMenu.addAction(&(this->deleteAllMarkedAction));
+    this->deleteAllMarkedAction.setVisible(false);
+
+    //delete this button
     this->optionsMenu.addSeparator();
     this->optionsMenu.addAction(&(this->deleteButtonAction));
 
@@ -78,6 +86,7 @@ contentButton::contentButton(QWidget *parent)
     connect(&(this->pasteContentAction), SIGNAL(triggered()), this, SLOT(pasteContentFromClipboard()));
     connect(&(this->removeTitleAction), SIGNAL(triggered()), this, SLOT(removeTitle()));
     connect(&(this->markForDeleteAction), SIGNAL(triggered()), this, SLOT(switchMarkedForDeletion()));
+    connect(&(this->deleteAllMarkedAction), SIGNAL(triggered()), this, SLOT(emitDeleteAllSignal()));
     connect(&(this->deleteButtonAction), SIGNAL(triggered()), this, SLOT(deleteThisButton()));
 }
 
@@ -178,6 +187,10 @@ void contentButton::checkForDynBtnSwitch(){
         qDebug() << "emit set mode to rm";
         emit this->dynBtnSetMode(dynAddRmButton::btnModeRM);
     }
+}
+
+void contentButton::emitDeleteAllSignal(){
+    emit this->deleteAllMarkedButtons();
 }
 
 bool contentButton::isFocused() const{
@@ -346,7 +359,7 @@ void contentButton::pasteContentFromClipboard(){
 void contentButton::enableCopyContent(){
     qDebug() << "start: Enable text copying.";
     this->copyContentAction.setVisible(true);
-    if(copyContentActionSeparator){
+    if(this->copyContentActionSeparator){
         this->copyContentActionSeparator->setVisible(true);
     }
 }
@@ -354,7 +367,7 @@ void contentButton::enableCopyContent(){
 void contentButton::disableCopyContent(){
     qDebug() << "start: Disable text copying.";
     this->copyContentAction.setVisible(false);
-    if(copyContentActionSeparator){
+    if(this->copyContentActionSeparator){
         this->copyContentActionSeparator->setVisible(false);
     }
 }
@@ -362,7 +375,7 @@ void contentButton::disableCopyContent(){
 void contentButton::enablePasteContent(){
     qDebug() << "start: Enable text pasting.";
     this->pasteContentAction.setVisible(true);
-    if(pasteContentActionSeparator){
+    if(this->pasteContentActionSeparator){
         this->pasteContentActionSeparator->setVisible(true);
     }
 }
@@ -370,8 +383,25 @@ void contentButton::enablePasteContent(){
 void contentButton::disablePasteContent(){
     qDebug() << "start: Disable text pasting.";
     this->pasteContentAction.setVisible(false);
-    if(pasteContentActionSeparator){
+    if(this->pasteContentActionSeparator){
         this->pasteContentActionSeparator->setVisible(false);
+    }
+}
+
+
+void contentButton::enableDeleteAllMarked(){
+    qDebug() << "start: Enable delete all marked.";
+    this->deleteAllMarkedAction.setVisible(true);
+    if(this->deleteAllMarkedActionSeparator){
+        this->deleteAllMarkedActionSeparator->setVisible(true);
+    }
+}
+
+void contentButton::disableDeleteAllMarked(){
+    qDebug() << "start: Disable delete all marked.";
+    this->deleteAllMarkedAction.setVisible(false);
+    if(this->deleteAllMarkedActionSeparator){
+        this->deleteAllMarkedActionSeparator->setVisible(false);
     }
 }
 
@@ -463,11 +493,15 @@ void contentButton::mouseRightClick(QMouseEvent *event){
 
 void contentButton::mousePressEvent(QMouseEvent *event){
     qDebug() << "start: mousePressEvent";
-    this->setAsFocusedButton();
-    if(event->button() == Qt::LeftButton){
-        this->mouseLeftClick();
-    }else if(event->button() == Qt::RightButton){
-        this->mouseRightClick(event);
+    Qt::KeyboardModifiers mod = event->modifiers();
+    if(mod == Qt::CTRL || mod == Qt::SHIFT){
+        this->switchMarkedForDeletion();
+    }else{
+        if(event->button() == Qt::RightButton){
+            this->mouseRightClick(event);
+        }else{
+            this->mouseLeftClick();
+        }
     }
     qDebug() << "end: mousePressEvent";
 }
@@ -475,10 +509,15 @@ void contentButton::mousePressEvent(QMouseEvent *event){
 void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
     //https://www.youtube.com/watch?v=Yg1FBrbfwNM
     qDebug() << "Double click!";
-    if(event->button() == Qt::LeftButton){
-        emit this->startContentButtonEdit(this->getIndexInGrid());
-    }else if(event->button() == Qt::RightButton){
-        this->mouseRightClick(event);
+    Qt::KeyboardModifiers mod = event->modifiers();
+    if(mod == Qt::CTRL || mod == Qt::SHIFT){
+        this->switchMarkedForDeletion();
+    }else{
+        if(event->button() == Qt::RightButton){
+            this->mouseRightClick(event);
+        }else{
+            emit this->startContentButtonEdit(this->getIndexInGrid());
+        }
     }
 }
 

@@ -252,6 +252,7 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
     connect(newContentBtn, SIGNAL(startContentButtonEdit(qsizetype)), this, SLOT(startButtonEdit(qsizetype)));
     connect(newContentBtn, SIGNAL(deleteButton(qsizetype)), this, SLOT(processSingleButtonDeletion(qsizetype)));
     connect(newContentBtn, SIGNAL(saveButtonChangesIntoJSON()), this, SLOT(saveCurrentButtonsAsJson()));
+    connect(newContentBtn, SIGNAL(deleteAllMarkedButtons()), this, SLOT(processRemoveAllMarkedButtons()));
     qDebug() << "everything has been connected!";
 }
 
@@ -908,8 +909,22 @@ void MainWindow::mousePressEvent(QMouseEvent *event){
     qDebug() << "end: mousePressEvent";
 }
 
+void MainWindow::adjustMenuOfContentButtons(dynAddRmButton::btnMode mode){
+    qDebug() << "start: adjustMenuOfContentButtons";
+    if(mode == dynAddRmButton::btnModeADD){
+        for(int i = 0; i < this->contentBtnList.count(); ++i){
+            this->contentBtnList.at(i)->disableDeleteAllMarked();
+        }
+    }else if(mode == dynAddRmButton::btnModeRM){
+        for(int i = 0; i < this->contentBtnList.count(); ++i){
+            this->contentBtnList.at(i)->enableDeleteAllMarked();
+        }
+    }
+}
+
 void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
     qDebug() << "start: adjustButtons";
+    this->adjustMenuOfContentButtons(mode);
     if(mode == dynAddRmButton::btnModeADD){
         qDebug() << "ADD";
         this->ui->textInputField->show();

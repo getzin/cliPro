@@ -24,9 +24,9 @@ void buttonEdit::editButton(contentButton* btn){
     }else{
         this->currentlyEditing = btn;
         this->ui->editContent->setText(btn->getContent());
+        this->ui->editTitle->setText(btn->getTitle());
         if(btn->hasTitle()){
             this->ui->editTitle->setVisible(true);
-            this->ui->editTitle->setText(btn->getTitle());
         }else{
             this->ui->editTitle->setVisible(false);
         }

@@ -315,7 +315,7 @@ void profileMenu::saveButtonPressed(){
         this->saveProfiles();
 
         //3 possible cases:
-        // 1) delete files of all profiles that are were deleted
+        // 1) delete files of all profiles that were deleted
         // 2) create new default JSON files for all new profiles
         // 3) rename files to new names
         this->processProfilesActions();

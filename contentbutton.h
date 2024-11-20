@@ -37,6 +37,8 @@ public:
     void disableCopyContent();
     void enablePasteContent();
     void disablePasteContent();
+    void enableDeleteAllMarked();
+    void disableDeleteAllMarked();
 
     void saveJSON();
     QString getTitle() const;
@@ -51,6 +53,7 @@ signals:
     void deleteButton(qsizetype indexOfSender);
     void keyWasPressed(int key, qsizetype indexOfSender);
     void startContentButtonEdit(qsizetype indexOfSender);
+    void deleteAllMarkedButtons();
 
     void saveButtonChangesIntoJSON(); //ToDo for editing content and adding/editing/removing title
 
@@ -69,6 +72,7 @@ private slots:
     void removeTitle();
     void switchMarkedForDeletion();
     void deleteThisButton();
+    void emitDeleteAllSignal();
 
 private:
     bool isNotMarkedForDeletion() const;
@@ -94,10 +98,12 @@ private:
     QAction copyContentAction;
     QAction pasteContentAction;
     QAction markForDeleteAction;
+    QAction deleteAllMarkedAction;
     QAction deleteButtonAction;
     QAction* removeTitleActionSeparator; //we enable/disable this separator depending on button state
     QAction* copyContentActionSeparator; //we enable/disable this separator depending on button content
     QAction* pasteContentActionSeparator; //we enable/disable this separator depending on clipboard content
+    QAction* deleteAllMarkedActionSeparator; //we enable/disable this separator depening on markedCount (>0 or not)
 
     qsizetype indexInGrid = -1;
     QString title;
@@ -116,6 +122,7 @@ private:
     static QString const textForPasteContentAct;
     static QString const textForMarkDeletionAct;
     static QString const textForUnmarkDeletionAct;
+    static QString const textForDeleteAllMarkedAct;
     static QString const textForDeleteButton;
 };
 

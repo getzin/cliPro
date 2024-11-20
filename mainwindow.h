@@ -45,6 +45,7 @@ private slots:
     void processSingleButtonDeletion(qsizetype indexOfSender);
     void profMenuCancel();
     void processClipBoard();
+    void processRemoveAllMarkedButtons();
 
 private:
     void fixTabOrder();
@@ -56,7 +57,6 @@ private:
     void addDynBtnAtEndOfContentButtons();
     void createAndAddNewButton(qsizetype row, qsizetype col, QString title, QString content);
     void processAddANewButton(QString defaultText);
-    void processRemoveAllMarkedButtons();
     void processMinusKey();
     void processEscapeKey();
     void processRemainingKeys(int key);
@@ -72,6 +72,7 @@ private:
     void doDefaultFocus();
     void processArrowKeyPress(int key, qsizetype indexOfSender);
     void setUpUnmarkAllBtn();
+    void adjustMenuOfContentButtons(dynAddRmButton::btnMode mode);
     void enablePasteForAllButtons();
     void disablePasteForAllButtons();
 
