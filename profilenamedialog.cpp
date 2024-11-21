@@ -63,7 +63,7 @@ void profileNameDialog::startNewProfileCreation(){
 void profileNameDialog::startEditOfProfileName(){
     qDebug() << "start: editProfile";
     if(this->visibleProfileListPtr && (this->visibleProfileListPtr->count() > 0)){
-        if(this->visibleProfileListPtr->selectedItems().size() == 1){
+        if(this->visibleProfileListPtr->selectedItems().count() == 1){
             QString currentItemTxt = this->visibleProfileListPtr->selectedItems().at(0)->text();
             qDebug() << "got string";
             if(!currentItemTxt.isEmpty()){

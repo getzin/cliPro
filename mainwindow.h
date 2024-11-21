@@ -70,12 +70,18 @@ private:
     void rebuildGrid();
     void removeSelectedButton(qsizetype index);
     void doDefaultFocus();
+    qsizetype getHiddenButtonCount();
+    qsizetype getAdjustedIndexOfSenderForSearch(qsizetype indexOfSender);
+    qsizetype getAdjustedNewIndexForSearch(qsizetype newIndex);
     void processArrowKeyPress(int key, qsizetype indexOfSender);
     void setUpUnmarkAllBtn();
     void adjustMenuOfContentButtons(dynAddRmButton::btnMode mode);
     void enablePasteForAllButtons();
     void disablePasteForAllButtons();
-
+    void setSearchActive();
+    void setSearchInactive();
+    void checkSearchMatchForAllButtons(QString searchString);
+    void resetSearchStatusOfAllButtons();
 
     Ui::MainWindow *ui;
     QVector<contentButton*> contentBtnList;
@@ -89,6 +95,7 @@ private:
 
     QPushButton unmarkAllBtn;
 
+    bool searchActive = false;
     static const QClipboard *clipboard;
     static const QMimeData *mimeData;
 

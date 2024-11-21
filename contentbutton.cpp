@@ -42,7 +42,7 @@ contentButton::contentButton(QWidget *parent)
     this->setAttribute(Qt::WA_MacShowFocusRect);
 
     //-1 here as the number is already increased upon creation (see ctor of contentbtncount.h)
-    this->setIndexInGrid(contentBtnCount::getTotalCnt() - 1);
+    this->setIndexInList(contentBtnCount::getTotalCnt() - 1);
 
     //---MENU---
     //add/edit title
@@ -271,7 +271,7 @@ void contentButton::keyPressEvent(QKeyEvent *event){
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
             this->openOptionsMenu(this->mapToGlobal(this->rect().center()));
         }else{
-            emit this->startContentButtonEdit(this->getIndexInGrid());
+            emit this->startContentButtonEdit(this->getIndexInList());
         }
     }else if(key == Qt::Key_C){
         this->copyContentToClipboard();
@@ -279,17 +279,23 @@ void contentButton::keyPressEvent(QKeyEvent *event){
         this->pasteContentFromClipboard();
     }else if(key == Qt::Key_Left || key == Qt::Key_Right
                || key == Qt::Key_Up || key == Qt::Key_Down
-               || key == Qt::Key_Delete || key == Qt::Key_Backspace
                || key == Qt::Key_Escape || key == Qt::Key_Plus
-               || key == Qt::Key_P){
-        emit this->keyWasPressed(key, this->getIndexInGrid());
+               || key == Qt::Key_P || key == Qt::Key_S){
+        emit this->keyWasPressed(key, this->getIndexInList());
+    }else if(key == Qt::Key_Delete || key == Qt::Key_Backspace){
+        Qt::KeyboardModifiers mod = event->modifiers();
+        if(mod == Qt::CTRL || mod == Qt::SHIFT){
+            this->switchMarkedForDeletion();
+        }else{
+            emit this->keyWasPressed(key, this->getIndexInList());
+        }
     }else if(key == Qt::Key_Minus || key == Qt::Key_Underscore){
         //underscore is Shift+MinusKey(-) on most keyboard layouts
         Qt::KeyboardModifiers mod = event->modifiers();
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
             this->switchMarkedForDeletion();
         }else{
-            emit this->keyWasPressed(key, this->getIndexInGrid());
+            emit this->keyWasPressed(key, this->getIndexInList());
         }
     }
     qDebug() << "end: Key press event! (contentButton)";
@@ -411,7 +417,7 @@ void contentButton::removeTitle(){
 }
 
 void contentButton::deleteThisButton(){
-    emit this->deleteButton(this->getIndexInGrid());
+    emit this->deleteButton(this->getIndexInList());
 }
 
 void contentButton::openOptionsMenu(QPoint p){
@@ -419,12 +425,12 @@ void contentButton::openOptionsMenu(QPoint p){
     optionsMenu.popup(p);
 }
 
-void contentButton::setIndexInGrid(qsizetype index){
-    this->indexInGrid = index;
+void contentButton::setIndexInList(qsizetype index){
+    this->indexInList = index;
 };
 
-qsizetype contentButton::getIndexInGrid() const{
-    return this->indexInGrid;
+qsizetype contentButton::getIndexInList() const{
+    return this->indexInList;
 };
 
 void contentButton::saveJSON(){
@@ -485,6 +491,26 @@ void contentButton::setContent(QString newContent){
     qDebug() << "end: setButtonContent";
 }
 
+void contentButton::checkIfSearchIsMatched(QString searchString){
+    if(this->title.contains(searchString)){
+        qDebug() << "Title: " << this->title << " --- contains search string: " << searchString;
+        this->buttonMatchesSearch = searchStatusMatched;
+    }else if(this->content.contains(searchString)){
+        qDebug() << "Content: <" << this->content << " --- contains search string: " << searchString;
+        this->buttonMatchesSearch = searchStatusMatched;
+    }else{
+        this->buttonMatchesSearch = searchStatusNoMatch;
+    }
+}
+
+void contentButton::resetSearchStatus(){
+    this->buttonMatchesSearch = searchStatusDefault;
+}
+
+contentButton::searchStatus contentButton::getSearchStatus(){
+    return this->buttonMatchesSearch;
+}
+
 void contentButton::mouseRightClick(QMouseEvent *event){
     qDebug() << "start: mouseRightClick";
     this->openOptionsMenu(event->globalPosition().toPoint());
@@ -516,7 +542,7 @@ void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
         if(event->button() == Qt::RightButton){
             this->mouseRightClick(event);
         }else{
-            emit this->startContentButtonEdit(this->getIndexInGrid());
+            emit this->startContentButtonEdit(this->getIndexInList());
         }
     }
 }
@@ -524,7 +550,7 @@ void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
 void contentButton::focusInEvent(QFocusEvent *event){
 
     qDebug() << "focusInEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
-    qDebug() << "focusInEvent ; index: " << this->getIndexInGrid();
+    qDebug() << "focusInEvent ; index: " << this->getIndexInList();
 
     QWidget::focusInEvent(event);
     qDebug() << "Reason: " << event->reason();
@@ -539,7 +565,7 @@ void contentButton::focusInEvent(QFocusEvent *event){
 void contentButton::focusOutEvent(QFocusEvent *event){
 
     qDebug() << "focusOutEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
-    qDebug() << "focusOutEvent ; index: " << this->getIndexInGrid();
+    qDebug() << "focusOutEvent ; index: " << this->getIndexInList();
 
     QWidget::focusOutEvent(event);
     qDebug() << "Reason: " << event->reason();

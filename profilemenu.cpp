@@ -26,7 +26,7 @@ profileMenu::profileMenu(QWidget *parent)
     this->dialog.setPtrToVisibleProfileList(this->ui->visibleProfileList);
     qDebug() << "Profiles List is set";
 
-    for(qsizetype i = 0; i < this->internalProfilesList.length(); ++i){
+    for(qsizetype i = 0; i < this->internalProfilesList.count(); ++i){
         qDebug() << "profilesList.at(" << i << ") : " << internalProfilesList.at(i);
     }
 
@@ -42,7 +42,7 @@ profileMenu::profileMenu(QWidget *parent)
 
     connect(this->ui->visibleProfileList, SIGNAL(itemSelectionChanged()), this, SLOT(handleSelectedProfileChanged()));
 
-    // if(ui->visibleProfileList->selectedItems().length() == 0){
+    // if(ui->visibleProfileList->selectedItems().count() == 0){
     //     ui->btnEdit->setDisabled(true);
     //     ui->btnDelete->setDisabled(true);
     //     ui->btnSave->setDisabled(true);
@@ -65,7 +65,7 @@ void profileMenu::constructVisibleListFromInternal(){
     qDebug() << "Start : initVisibleListFromInternal";
 
     this->ui->visibleProfileList->clear();
-    for(qsizetype i = 0; i < internalProfilesList.length(); ++i){
+    for(qsizetype i = 0; i < internalProfilesList.count(); ++i){
         qDebug() << "i: " << i << " ; value: " << this->internalProfilesList.at(i);
         this->ui->visibleProfileList->insertItem(i, this->internalProfilesList.at(i));
     }
@@ -137,7 +137,7 @@ void profileMenu::loadProfiles(){
 
     //make sure the index is valid //ToDo combine cases?
     if(isOK){
-        if(tmpCurrSelIndex < this->internalProfilesList.size()){
+        if(tmpCurrSelIndex < this->internalProfilesList.count()){
             qDebug() << "index is valid";
             this->lastSavedSelProfileID = tmpCurrSelIndex;
             this->ui->visibleProfileList->setCurrentRow(tmpCurrSelIndex);
@@ -167,10 +167,10 @@ void profileMenu::saveProfiles(){
     settings.setValue(appSettings::settingsValProfilesList, this->internalProfilesList);
 
     bool indexOK = false;
-    qsizetype tmpListSize = this->internalProfilesList.size();
+    qsizetype tmpListSize = this->internalProfilesList.count();
     if(tmpListSize > 1){
         qDebug() << "1 or more profiles exist! (good)";
-        if(this->ui->visibleProfileList->selectedItems().size() == 1){
+        if(this->ui->visibleProfileList->selectedItems().count() == 1){
 
             qsizetype tmpValForCurrSelID = this->ui->visibleProfileList->currentRow();
             qDebug() << "tmpValForCurrSelID: " << tmpValForCurrSelID;
@@ -360,7 +360,7 @@ QString profileMenu::getCurrSelProfileName() const{
 
 void profileMenu::handleSelectedProfileChanged(){
     qDebug() << "start: handleSelectionChange";
-    if(ui->visibleProfileList->selectedItems().length() > 0){
+    if(ui->visibleProfileList->selectedItems().count() > 0){
         qDebug() << "enable";
         this->setEditDelEnabled();
     }else{

@@ -15,6 +15,11 @@ class contentButton : public QPushButton, public contentBtnCount
     Q_OBJECT
 
 public:
+    enum searchStatus {
+        searchStatusDefault = -1,
+        searchStatusNoMatch = 0,
+        searchStatusMatched = 1,
+    };
     explicit contentButton(QWidget *parent);
     ~contentButton();
 
@@ -30,8 +35,8 @@ public:
     static void restoreLastUnfocusedButtonToFocusedButton();
     static void clearLastUnfocusedButton();
 
-    void setIndexInGrid(qsizetype index);
-    qsizetype getIndexInGrid() const;
+    void setIndexInList(qsizetype index);
+    qsizetype getIndexInList() const;
 
     void enableCopyContent();
     void disableCopyContent();
@@ -46,7 +51,9 @@ public:
     bool hasTitle() const;
     QString getContent() const;
     void setContent(QString newContent);
-
+    void checkIfSearchIsMatched(QString searchString);
+    void resetSearchStatus();
+    searchStatus getSearchStatus();
 
 signals:
     void dynBtnSetMode(dynAddRmButton::btnMode);
@@ -105,10 +112,11 @@ private:
     QAction* pasteContentActionSeparator; //we enable/disable this separator depending on clipboard content
     QAction* deleteAllMarkedActionSeparator; //we enable/disable this separator depening on markedCount (>0 or not)
 
-    qsizetype indexInGrid = -1;
+    qsizetype indexInList = -1;
     QString title;
     QString content;
     bool markedForDeletion = false;
+    searchStatus buttonMatchesSearch = searchStatusDefault;
 
     static contentButton *focusedButton;
     static contentButton *lastUnfocusedButton;
