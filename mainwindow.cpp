@@ -17,7 +17,6 @@
 #include "apputils.h"
 
 const QClipboard *MainWindow::clipboard = nullptr;
-const QMimeData *MainWindow::mimeData = nullptr;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -91,10 +90,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&(this->dynBtn), SIGNAL(keyPressOnDynBtn(int)), this, SLOT(processDynBtnKeyPress(int)));
     connect(&(this->dynBtn), SIGNAL(mainWindowButtonsNeedSwitch(dynAddRmButton::btnMode)), this, SLOT(adjustButtons(dynAddRmButton::btnMode)));
 
-    connect(&(this->profMenu), SIGNAL(selProfileHasChanged(QString)), this, SLOT(updateButtonsForProfileChange(QString)));
+    connect(&(this->profMenu), SIGNAL(selProfileHasChanged(QString,bool)), this, SLOT(updateButtonsForProfileChange(QString,bool)));
     connect(&(this->profMenu), SIGNAL(newProfileCreated(QString)), this, SLOT(createDefaultJsonForNewProfile(QString)));
-    connect(&(this->profMenu), SIGNAL(cancelled()), this, SLOT(profMenuCancel()));
-    connect(&(this->profMenu), SIGNAL(rejected()), this, SLOT(profMenuCancel()));
+    connect(&(this->profMenu), SIGNAL(profMenuRejected()), this, SLOT(restoreLastUnfocused()));
 
     connect(this->ui->buttonProfile, SIGNAL(clicked()), this, SLOT(profileButtonClicked()));
     connect(this->ui->buttonAdd, SIGNAL(clicked()), this, SLOT(processActionForAddButton()));
@@ -102,7 +100,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this->ui->textInputField, SIGNAL(textChanged(QString)), this, SLOT(processTextFieldChange(QString)));
 
     if(!clipboard){ clipboard = QApplication::clipboard(); }
-    if(!mimeData){ mimeData = clipboard->mimeData(); }
     connect(clipboard, SIGNAL(dataChanged()), this, SLOT(processClipBoard()));
     this->processClipBoard(); //process initial clipboard
 }
@@ -386,17 +383,19 @@ void MainWindow::processAddANewButton(QString defaultText){
 }
 
 void MainWindow::saveCurrentButtonsAsJson(){
+    qDebug() << "start: saveCurrentButtonsAsJson";
     this->saveButtonsAsJson(this->pathToFileForSelectedProfile, this->contentBtnList);
 }
 
 void MainWindow::saveDefaultJsonForProfile(QString pathToFile){
+    qDebug() << "start: saveDefaultJsonForProfile";
     QVector<contentButton*> dummy; //empty list stays empty
     this->saveButtonsAsJson(pathToFile, dummy);
 }
 
 void MainWindow::saveButtonsAsJson(QString pathToFile, QVector<contentButton*> listOfBtns){
 
-    qDebug() << "start: saveButtonsAsJson";
+    qDebug() << "start: saveButtonsAsJson (pathToFile: " << pathToFile << ")";
 
     //making sure not to safe into an empty string, this case should technically never happen,
     //unless somehow no profile is selected which also should never happen... but there is a chance
@@ -446,12 +445,16 @@ void MainWindow::unmarkAllContentButtons(){
 }
 
 void MainWindow::doDefaultFocus(){
+    qDebug() << "start: doDefaultFocus";
     if(this->contentBtnList.empty()){
+        qDebug() << "list is empty. Give focus to dynBtn.";
         //if the contentBtnList is empty, set the focus on the dynBtn
         this->dynBtn.setFocus();
     }else{
+        qDebug() << "list is NOT empty.";
         //if list is not empty, just set the focus on the first button
-        this->contentBtnList.at(0)->gainFocus();
+        qsizetype index = this->getProperIndex(0);
+        this->contentBtnList.at(index)->gainFocus();
     }
 }
 
@@ -479,19 +482,28 @@ qsizetype MainWindow::getAdjustedIndexOfSenderForSearch(qsizetype indexOfSender)
 }
 
 qsizetype MainWindow::getAdjustedNewIndexForSearch(qsizetype newIndex){
+    qDebug() << "start: getAdjustedNewIndexForSearch (newIndex: " << newIndex;
     for(qsizetype i = 0; i < this->contentBtnList.count() && i <= newIndex; i++){
         if(this->contentBtnList.at(i)->isHidden()){
             newIndex++;
         }
     }
+    qDebug() << "adjusted index: " << newIndex;
     return newIndex;
+}
+
+qsizetype MainWindow::getProperIndex(qsizetype index){
+    if(this->searchActive){
+        index = this->getAdjustedNewIndexForSearch(index);
+    }
+    return index;
 }
 
 void MainWindow::processArrowKeyPress(int key, qsizetype indexOfSender){
     qDebug() << "start: processArrowKeyPress (index of sender: " << indexOfSender << ")";
 
-    qsizetype sizeForCalc = contentBtnList.count();
-    if(indexOfSender == contentBtnList.count()){
+    qsizetype sizeForCalc = this->contentBtnList.count();
+    if(indexOfSender == this->contentBtnList.count()){
         //expl: if we were called through dynBtn (see processDynBtnKeyPress), then the calculation
         //should include the dynBtn as if it was another contentButton. Otherwise ignore it
         ++sizeForCalc;
@@ -502,7 +514,7 @@ void MainWindow::processArrowKeyPress(int key, qsizetype indexOfSender){
     if(this->searchActive){
         qDebug() << "search is active! adjust size!";
         sizeForCalc -= this->getHiddenButtonCount();
-        indexOfSender = getAdjustedIndexOfSenderForSearch(indexOfSender);
+        indexOfSender = this->getAdjustedIndexOfSenderForSearch(indexOfSender);
     }
     qDebug() << "(after adj.) sizeForCalc: " << sizeForCalc;
     qDebug() << "(after adj.) indexOfSender: " << indexOfSender;
@@ -568,7 +580,9 @@ void MainWindow::processSingleButtonDeletion(qsizetype indexOfSender){
     QMessageBox::StandardButton reply;
 
     //ToDo, once buttons have names/labels/titles, include it in the confirmation question's text
-    reply = QMessageBox::question(this, "Delete Confirmation", "Do you really want to delete this button?",
+    reply = QMessageBox::question(this, "Delete button confirmation",
+                                  "Do you really want to delete <b>this</b> button?"
+                                  "<br><br><i><b><u>WARNING:</u></b> This action is <b>irreversible!</b></i>",
                                   QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
     if(reply == QMessageBox::Yes){
@@ -679,7 +693,11 @@ void MainWindow::processContentButtonKeyPress(int key, qsizetype indexOfSender){
         }else if(key == Qt::Key_Delete || key == Qt::Key_Backspace){
             this->processSingleButtonDeletion(indexOfSender);
         }else{
-            this->processRemainingKeys(key);
+            if(key == Qt::Key_Minus && contentButton::getMarkedForDelCnt() == 0){
+                this->processSingleButtonDeletion(indexOfSender);
+            }else{
+                this->processRemainingKeys(key);
+            }
         }
     }else{
         qDebug() << "index is out of bounds.";
@@ -694,9 +712,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
     if(key == Qt::Key_Left || key == Qt::Key_Right
                || key == Qt::Key_Up || key == Qt::Key_Down){
         qDebug() << "Arrow Key!";
-        if(!(this->contentBtnList.empty())){
-            this->contentBtnList.at(0)->gainFocus();
-        }
+        this->doDefaultFocus();
     }else if(key == Qt::Key_Return || key == Qt::Key_Enter){
         qDebug() << "Enter pressed on MainWindow.";
         Qt::KeyboardModifiers mod = event->modifiers();
@@ -920,7 +936,9 @@ void MainWindow::processRemoveAllMarkedButtons(){
     qDebug() << "start: processRemoveAllMarkedButtons";
 
     QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this, "Delete Confirmation", "Do you really want to delete all marked items?",
+    reply = QMessageBox::question(this, "Delete ALL MARKED buttons confirmation",
+                                  "Do you really want to delete <b>ALL MARKED</b> buttons?"
+                                  "<br><br><i><b><u>WARNING:</u></b> This action is <b>irreversible!</b></i>",
                                   QMessageBox::Reset|QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
     if(reply == QMessageBox::Yes){
@@ -972,17 +990,23 @@ void MainWindow::setDisplayedProfileName(QString name){
 }
 
 //ToDo check if profileName is even needed... remove if not
-void MainWindow::updateButtonsForProfileChange(QString profileName){
+void MainWindow::updateButtonsForProfileChange(QString profileName, bool currentActiveProfHasBeenDeleted){
     qDebug() << "start: updateButtonsForProfileChange";
     qDebug() << "received name: " << profileName;
+    qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
     if(profileName == ""){
         qDebug() << "invalid profileName.. load default.";
         //ToDo load default stuff
     }else{
-        if(profileName == this->currSelectedProfileName){
+        if(profileName == this->currSelectedProfileName && currentActiveProfHasBeenDeleted == false){
             qDebug() << "Profile is already the current selected one, no change, do nothing.";
         }else{
-            this->saveCurrentButtonsAsJson();
+            if(currentActiveProfHasBeenDeleted == false){
+                qDebug() << "current active profile has NOT been deleted --> save current buttons!";
+                this->saveCurrentButtonsAsJson();
+            }else{
+                qDebug() << "current active profile HAS been deleted --> skip saving buttons";
+            }
             this->clearContentButtonList();
             this->changeProfileName(profileName);
 
@@ -1063,8 +1087,8 @@ void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
     qDebug() << "end: adjustButtons";
 }
 
-void MainWindow::profMenuCancel(){
-    qDebug() << "cancelled!";
+void MainWindow::restoreLastUnfocused(){
+    qDebug() << "restoreLastUnfocused!";
     contentButton::restoreLastUnfocusedButtonToFocusedButton();
 }
 
@@ -1081,8 +1105,9 @@ void MainWindow::disablePasteForAllButtons(){
 }
 
 void MainWindow::processClipBoard(){
-    qDebug() << "start: processClipBoard";
-    if(this->mimeData->hasText()){
+    qDebug() << "start: process ClipBoard";
+    const QMimeData *mimeData = clipboard->mimeData();
+    if(mimeData->hasText()){
         qDebug() << "Clipboard data is text.";
         this->enablePasteForAllButtons();
     }else if(mimeData->hasImage()){
@@ -1090,6 +1115,7 @@ void MainWindow::processClipBoard(){
         //ToDo (image paste implementation pending, for now disable pasting)
         this->disablePasteForAllButtons();
     }else{
+        qDebug() << "Clipboard data is neither text not image.";
         this->disablePasteForAllButtons();
     }
 }

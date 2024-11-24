@@ -35,6 +35,7 @@ profileMenu::profileMenu(QWidget *parent)
     connect(this->ui->btnDelete, SIGNAL(clicked()), this, SLOT(deleteButtonPressed())); //delete button
     connect(this->ui->btnCancel, SIGNAL(clicked()), this, SLOT(cancelButtonPressed())); //cancel button
     connect(this->ui->btnSave, SIGNAL(clicked()), this, SLOT(saveButtonPressed())); //save button
+    connect(this, SIGNAL(rejected()), this, SLOT(handleRejectedSignal()));
 
     //callback from dialog, after new profile // editing of existing profile name
     connect(&(this->dialog), SIGNAL(profileNameEdited(QString,QString)), this, SLOT(handleProfileNameEdited(QString,QString)));
@@ -71,14 +72,16 @@ void profileMenu::constructVisibleListFromInternal(){
     }
     qDebug() << "Size of visibleProfileList: " << this->ui->visibleProfileList->count();
 
-    //check that the currSelectedProfileID lies within our now inited profiles list
-    if(indexIsInBounds(this->lastSavedSelProfileID, this->ui->visibleProfileList->count())){
-        qDebug() << "ID (" << this->lastSavedSelProfileID << ") lies in in-bounds. Set it!";
-        this->ui->visibleProfileList->setCurrentRow(this->lastSavedSelProfileID);
+    //check that the currentActiveProfile lies within our now inited profiles list
+    if(indexIsInBounds(this->currentActiveProfile, this->ui->visibleProfileList->count())){
+        qDebug() << "ID (" << this->currentActiveProfile << ") lies in in-bounds. Set it!";
+        this->ui->visibleProfileList->setCurrentRow(this->currentActiveProfile);
     }else{
-        qDebug() << "ID (" << this->lastSavedSelProfileID << ") lies out of bounds... init as -1 instead.";
+        qDebug() << "ID (" << this->currentActiveProfile << ") lies out of bounds... init as -1 instead.";
         this->ui->visibleProfileList->setCurrentRow(-1);
     }
+    this->currentActiveProfHasBeenDeleted = false; //reset
+    this->savedIDOffset = 0;
     qDebug() << "End : initVisibleListFromInternal";
 }
 
@@ -98,8 +101,8 @@ void profileMenu::saveVisibleListToInternal(){
             qsizetype currSelRow = this->ui->visibleProfileList->currentRow();
             if(indexIsInBounds(currSelRow, visibleProfileCnt)){
                 indexOK = true;
-                qDebug() << "id (" << currSelRow << ") lies in in-bounds. Set lastSavedSelProfileID to: " << currSelRow;
-                this->lastSavedSelProfileID = currSelRow;
+                qDebug() << "id (" << currSelRow << ") lies in in-bounds. Set currentActiveProfile to: " << currSelRow;
+                this->currentActiveProfile = currSelRow;
             }else{
                 qDebug() << "id (" << currSelRow << ") lies out of bounds (bad)";
             }
@@ -110,9 +113,10 @@ void profileMenu::saveVisibleListToInternal(){
         qDebug() << "visibleProfileCnt is less than 0 (bad)";
     }
     if(!indexOK){
-        qDebug() << "Set lastSavedSelProfileID as -1 instead.";
-        this->lastSavedSelProfileID = -1;
+        qDebug() << "Set currentActiveProfile as -1 instead.";
+        this->currentActiveProfile = -1;
     }
+    this->savedIDOffset = 0;
     qDebug() << "End : saveVisibleListToInternal";
 }
 
@@ -133,24 +137,24 @@ void profileMenu::loadProfiles(){
     qsizetype tmpCurrSelIndex = tmpCurrSelIdVal.toInt(&isOK);
 
     qDebug() << "read ID: " << tmpCurrSelIdVal << " ; profiles list size: " << this->internalProfilesList.size();
-    qDebug() << "currSelectedProfileID before: " << this->lastSavedSelProfileID;
+    qDebug() << "currentActiveProfile before: " << this->currentActiveProfile;
 
     //make sure the index is valid //ToDo combine cases?
     if(isOK){
         if(tmpCurrSelIndex < this->internalProfilesList.count()){
             qDebug() << "index is valid";
-            this->lastSavedSelProfileID = tmpCurrSelIndex;
+            this->currentActiveProfile = tmpCurrSelIndex;
             this->ui->visibleProfileList->setCurrentRow(tmpCurrSelIndex);
         }else{
             qDebug() << "index out of range";
-            this->lastSavedSelProfileID = -1; //index was invalid
+            this->currentActiveProfile = -1; //index was invalid
         }
     }else{
         qDebug() << "index not valid";
-        this->lastSavedSelProfileID = -1; //index was invalid
+        this->currentActiveProfile = -1; //index was invalid
     }
 
-    qDebug() << "currSelectedProfileID after: " << this->lastSavedSelProfileID;
+    qDebug() << "currentActiveProfile after: " << this->currentActiveProfile;
     settings.endGroup();
 
     for(qsizetype i = 0; i < this->internalProfilesList.count(); ++i){
@@ -221,9 +225,9 @@ void profileMenu::deleteButtonPressed(){
         confirmationText.append(textOfselectedItem);
     }
 
-    confirmationText.append("</b> with all its clips? <br><br><i>(WARNING: This is irreversible)</i>");
+    confirmationText.append("</b> with all its buttons? <br><br><i><b><u>WARNING:</u></b> This will be <b>irreversible</b> after pressing 'Save profiles'</i>");
 
-    QMessageBox::StandardButton reply = messageBox.question(this, "Delete Confirmation", confirmationText,
+    QMessageBox::StandardButton reply = messageBox.question(this, "Delete confirmation", confirmationText,
                                 QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
     if(reply == QMessageBox::Yes){
@@ -234,7 +238,34 @@ void profileMenu::deleteButtonPressed(){
             QString delName = itemToDelete->text();
             this->unsavedActions.append(profAction{delName, ""});
             delete itemToDelete;
-            this->ui->visibleProfileList->setCurrentRow(-1); //makes it so that no profile is selected
+
+            qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
+
+            if(currRow == this->currentActiveProfile){
+                this->currentActiveProfHasBeenDeleted = true;
+            }
+
+            if(this->currentActiveProfHasBeenDeleted){
+                this->ui->visibleProfileList->setCurrentRow(-1); //makes it so that no profile is selected
+            }else{
+                //Next block of code:
+                // restore "currently selected profile", but process whether
+                // deleted profile was before or after and set it accordingly
+                qsizetype lastSavedIDOffsetApplied = this->currentActiveProfile - this->savedIDOffset;
+
+                //if the deleted item appeared before the last saved ID, then reduce values by 1
+                if(currRow < lastSavedIDOffsetApplied){
+                    ++savedIDOffset;
+                    --lastSavedIDOffsetApplied;
+                }
+
+                qDebug() << "index (lastSavedIDOffsetApplied): " << lastSavedIDOffsetApplied;
+                if(indexIsInBounds(lastSavedIDOffsetApplied, this->ui->visibleProfileList->count())){
+                    this->ui->visibleProfileList->setCurrentRow(lastSavedIDOffsetApplied);
+                }else{
+                    this->ui->visibleProfileList->setCurrentRow(-1); //makes it so that no profile is selected
+                }
+            }
         }else{
             ; //do nothing?
         }
@@ -244,12 +275,15 @@ void profileMenu::deleteButtonPressed(){
     //ToDo check case where ALL PROFILES get deleted!! (what happens? what SHOULD happen?)
 }
 
-void profileMenu::cancelButtonPressed(){
-    qDebug("Profiles: Cancel Button pressed");
+void profileMenu::commonCloseActions(){
     this->constructVisibleListFromInternal();
     this->unsavedActions.clear();
     this->close();
-    emit this->cancelled();
+}
+
+void profileMenu::cancelButtonPressed(){
+    qDebug("Profiles: Cancel Button pressed");
+    this->commonCloseActions();
 }
 
 QString profileMenu::constructFilePathForProfileJson(QString profileName){
@@ -319,20 +353,22 @@ void profileMenu::saveButtonPressed(){
         // 2) create new default JSON files for all new profiles
         // 3) rename files to new names
         this->processProfilesActions();
-        this->close();
+
+        qDebug() << "currentActiveProfile: " << currentActiveProfile;
+        qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
+
+        if(indexIsInBounds(this->currentActiveProfile, this->internalProfilesList.count())){
+            qDebug() << "currentActiveProfile is valid";
+            emit this->selProfileHasChanged(this->internalProfilesList.at(this->currentActiveProfile), this->currentActiveProfHasBeenDeleted);
+        }else{
+            qDebug() << "currentActiveProfile is invalid";
+            emit this->selProfileHasChanged("", this->currentActiveProfHasBeenDeleted);
+        }
+        this->currentActiveProfHasBeenDeleted = false; //reset
+        this->hide();
     }else{
-        timedPopUp(this, 3000, "<p align='center'>Please<br><b>select a profile</b><br>to continue.</p>");
+        timedPopUp(this, defaultLongPopUpTimer, "<p align='center'>Please<br><b>select a profile</b><br>to continue.</p>");
         qDebug() << "no profile selected!";
-    }
-
-    //emit signal with new profile name?
-    qDebug() << "lastSavedSelProfileID: " << lastSavedSelProfileID;
-
-    if(indexIsInBounds(this->lastSavedSelProfileID, this->internalProfilesList.count())){
-        emit this->selProfileHasChanged(this->internalProfilesList.at(this->lastSavedSelProfileID));
-    }else{
-        qDebug() << "lastSavedSelProfileID was invalid";
-        emit this->selProfileHasChanged("");
     }
 }
 
@@ -347,12 +383,21 @@ void profileMenu::handleNewProfileCreation(QString newName){
     qDebug() << "(new) userInput: " << newName;
     this->ui->visibleProfileList->addItem(newName);
     this->unsavedActions.append(profAction{"", newName});
+    //point the "selection cursor" to the newly created item!
+    QList<QListWidgetItem*> matchingItems = this->ui->visibleProfileList->findItems(newName, Qt::MatchExactly);
+    if(matchingItems.count() > 0){
+        //we disallow items in the list having the same name, so this result should never be ambiguous
+        QListWidgetItem *newItem = matchingItems.at(0);
+        int rowOfNewItem = this->ui->visibleProfileList->row(newItem);
+        qDebug() << "row of new item: " << rowOfNewItem;
+        this->ui->visibleProfileList->setCurrentRow(rowOfNewItem);
+    }
     this->dialog.close();
 }
 
 QString profileMenu::getCurrSelProfileName() const{
-    if(indexIsInBounds(this->lastSavedSelProfileID, this->internalProfilesList.count())){
-        return this->internalProfilesList.at(this->lastSavedSelProfileID);
+    if(indexIsInBounds(this->currentActiveProfile, this->internalProfilesList.count())){
+        return this->internalProfilesList.at(this->currentActiveProfile);
     }else{
         return "";
     }
@@ -380,7 +425,8 @@ void profileMenu::setEditDelDisabled(){
     this->ui->btnDelete->setDisabled(true);
 }
 
-void profileMenu::closeEvent(QCloseEvent *event){
-    Q_UNUSED(event)
-    this->cancelButtonPressed();
+void profileMenu::handleRejectedSignal(){
+    qDebug() << "rejected!";
+    this->commonCloseActions();
+    emit this->profMenuRejected();
 }

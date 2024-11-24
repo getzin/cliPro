@@ -34,7 +34,7 @@ private slots:
     void processDynBtnKeyPress(int key);
     void unmarkAllContentButtons();
     void profileButtonClicked();
-    void updateButtonsForProfileChange(QString profileName);
+    void updateButtonsForProfileChange(QString profileName, bool currentActiveProfHasBeenDeleted);
     void createDefaultJsonForNewProfile(QString profileName);
     void processContentButtonKeyPress(int key, qsizetype indexOfSender);
     void startButtonEdit(qsizetype indexOfSender);
@@ -43,7 +43,7 @@ private slots:
     void processActionForSearchButton();
     void processTextFieldChange(QString);
     void processSingleButtonDeletion(qsizetype indexOfSender);
-    void profMenuCancel();
+    void restoreLastUnfocused();
     void processClipBoard();
     void processRemoveAllMarkedButtons();
 
@@ -73,6 +73,7 @@ private:
     qsizetype getHiddenButtonCount();
     qsizetype getAdjustedIndexOfSenderForSearch(qsizetype indexOfSender);
     qsizetype getAdjustedNewIndexForSearch(qsizetype newIndex);
+    qsizetype getProperIndex(qsizetype index);
     void processArrowKeyPress(int key, qsizetype indexOfSender);
     void setUpUnmarkAllBtn();
     void adjustMenuOfContentButtons(dynAddRmButton::btnMode mode);
@@ -97,8 +98,6 @@ private:
 
     bool searchActive = false;
     static const QClipboard *clipboard;
-    static const QMimeData *mimeData;
-
     static int constexpr stretchOfUnmarkAllBtn = 28; //this value has to be determined empirically
         //(it's roughly equal to the stretch of the inputField+addBtn+searchBtn+a bit more for each spacing between the 3)
 

@@ -19,12 +19,11 @@ public:
     static QString constructFilePathForProfileJson(QString profileName);
 
 signals:
-    void selProfileHasChanged(QString newProfileName);
+    void selProfileHasChanged(QString newProfileName, bool);
     void newProfileCreated(QString newProfileName);
-    void cancelled();
+    void profMenuRejected();
 
 protected:
-    void closeEvent(QCloseEvent *event) override;
     void loadProfiles();
     void saveProfiles();
 
@@ -35,6 +34,7 @@ private slots:
     void cancelButtonPressed();
     void saveButtonPressed();
     void handleSelectedProfileChanged();
+    void handleRejectedSignal();
 
 private:
     //we derive the action from the states of delName & newName
@@ -48,12 +48,16 @@ private:
     QList<profAction> unsavedActions;
     Ui::profileMenu *ui;
     profileNameDialog dialog;
-    qsizetype lastSavedSelProfileID = -1; //-1 means "none selected/invalid"
+    qsizetype currentActiveProfile = -1; //-1 means "none selected/invalid" //ToDo ... "selected/invalid/deleted"
+    qsizetype savedIDOffset = 0; //comes into play when deleting items with lower index than the currentActiveProfile,
+                                 //value "grows" but will only ever subtracted from currentActiveProfile
+    bool currentActiveProfHasBeenDeleted = false;
     QStringList internalProfilesList;
 
     void constructVisibleListFromInternal();
     void saveVisibleListToInternal();
     void processProfilesActions();
+    void commonCloseActions();
     void renameProfilesJson(QString oldName, QString newName);
     void createNewProfilesJson(QString name);
     void deleteProfilesJson(QString name);

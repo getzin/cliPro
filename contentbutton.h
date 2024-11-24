@@ -115,6 +115,8 @@ private:
     qsizetype indexInList = -1;
     QString title;
     QString content;
+    static int constexpr maxTitleLengthForDisplaying = 50; //after this many letters, the title starts becoming unreadible
+    static int constexpr maxContentLengthForDisplaying = 1000; //there will be heavy performance issues past a certain size
     bool markedForDeletion = false;
     searchStatus buttonMatchesSearch = searchStatusDefault;
 

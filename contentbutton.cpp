@@ -344,9 +344,9 @@ void contentButton::pasteContentFromClipboard(){
             qDebug() << "There already is text!";
             QMessageBox::StandardButton reply;
 
-            reply = QMessageBox::question(this, "Override Confirmation",
+            reply = QMessageBox::question(this, "Override confirmation",
                                           "Do you really want to override the existing content for this button?"
-                                          "<br><br><i>(WARNING: This is irreversible)</i>",
+                                          "<br><br><i><b><u>WARNING:</u></b> This action is <b>irreversible!</b></i>",
                                           QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
             if(reply == QMessageBox::No){
                 save = false;
@@ -579,18 +579,18 @@ void contentButton::focusOutEvent(QFocusEvent *event){
 
 void contentButton::paintEvent(QPaintEvent *event){
 
-    // qDebug() << "    (start) PAINT EVENT";
-
     QPushButton::paintEvent(event);
 
     QPainter combinedImage(this);
 
-    // int cutAtPercent = 100;
-    // int totalPercent = 500;
-    // int dividingHeight = this->height()*cutAtPercent/totalPercent;
+    QString titleToBeUsed;
+    if(this->title.length() < this->maxTitleLengthForDisplaying){
+        titleToBeUsed = this->title;
+    }else{
+        titleToBeUsed = this->title.first(this->maxTitleLengthForDisplaying).append("...");
+    }
 
-
-    QTextDocument docTitle(this->title);
+    QTextDocument docTitle(titleToBeUsed);
     QTextOption optTitle(Qt::AlignHCenter);
     docTitle.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
     docTitle.setDefaultTextOption(optTitle);
@@ -598,49 +598,22 @@ void contentButton::paintEvent(QPaintEvent *event){
 
     if(docTitle.size().width() < this->width()){
         docTitle.setTextWidth(this->width());
-
-        // qDebug() << "(adjusted!) docTitle.size().width(): " << docTitle.size().width();
-        // qDebug() << "(adjusted!) docTitle.size().height(): " << docTitle.size().height();
     }
-
-    // int dividingHeight = qMin(this->height()/5, 30);
-    // int dividingHeight = docTitle.size().height();
-    // int remainingHeight = qMax(this->height() - dividingHeight, 30);
 
     //ToDo check int vs. double
     int dividingHeight = this->title.length() > 0 ? docTitle.size().height() : 0;
     int remainingHeight = this->height() - dividingHeight;
 
-
-    // qDebug() << "this->width(): " << this->width();
-    // qDebug() << "this->height(): " << this->height();
-    // qDebug() << "---";
-
-    // qDebug() << "dividingHeight: " << dividingHeight;
-    // qDebug() << "remainingHeight: " << remainingHeight;
-    // qDebug() << "---";
-
     QPoint pointTitle(0,0);
     QSize sizeTitle(this->width() - 1, dividingHeight);
     QRect rectTitle(pointTitle, sizeTitle);
 
-    // qDebug() << "docTitle.textWidth(): " << docTitle.textWidth(); //always "-1"
-    // qDebug() << "docTitle.size().width(): " << docTitle.size().width();
-    // qDebug() << "docTitle.size().height(): " << docTitle.size().height();
-
     QPixmap pixmapTitle(docTitle.size().width(), docTitle.size().height());
     pixmapTitle.fill(Qt::transparent);
 
-    // qDebug() << "pixmapTitle.width(): " << pixmapTitle.width();
-    // qDebug() << "pixmapTitle.height(): " << pixmapTitle.height();
-
-
     QPainter paintTitle(&pixmapTitle);
     paintTitle.setBrush(Qt::black);
-    // paintTitle.setFont(QFont("Times", 100, QFont::Medium));
     docTitle.drawContents(&paintTitle, pixmapTitle.rect());
-    // QPixmap scaledPixmapTitle = pixmapTitle.scaledToWidth(this->rect().width(), Qt::SmoothTransformation);
-    // QPixmap scaledPixmapTitle = pixmapTitle.scaled(sizeTitle, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     QPixmap scaledPixmapTitle(pixmapTitle);
     /*
      * problem: when setting the scaledPixmap as icon (see below), any text
@@ -650,113 +623,34 @@ void contentButton::paintEvent(QPaintEvent *event){
      *           that doesn't fit into the rect (== that was overhanging on the right)
      */
     QPixmap croppedPixmapTitle = scaledPixmapTitle.copy(pixmapTitle.rect());
-
-    // combinedImage.setBrush(Qt::gray);
-    // combinedImage.drawRect(rectTitle);
-
     combinedImage.drawPixmap(rectTitle,croppedPixmapTitle);
 
-    // qDebug() << "---";
-    //---------------------------------------------------------------------------------
-
+    //--------------------/TITLE---------------------
+    //--------------------CONTENT--------------------
 
     QPoint pointContent(0, dividingHeight);
-    // QSize sizeContent(this->width() - 1, this->height() - dividingHeight - 1);
-    // QSize sizeContent(this->width() - 1, remainingHeight - 1); //ToDo check the "-1" of height
     QSize sizeContent(this->width() - 1, remainingHeight); //ToDo check the "-1" of height
-    // QRect rectContent(pointContent, sizeContent);
 
-    QTextDocument docContent(this->content);
-    // QTextDocument docContent("OK this is just a test ignore what I say here have a nice day");
-    // QTextOption optContent(Qt::AlignHCenter);
-    // docContent.setDefaultTextOption(optContent);
+    QString contentToBeUsed = this->content.length() > this->maxContentLengthForDisplaying ? "..." : this->content;
+
+    QTextDocument docContent(contentToBeUsed);
     docContent.setDefaultFont(QFont("Times", 12, QFont::Medium));
     docTitle.adjustSize();
 
-    // qDebug() << "docContent.textWidth(): " << docContent.textWidth();
-    // qDebug() << "docContent.size().width(): " << docContent.size().width();
-    // qDebug() << "docContent.size().height(): " << docContent.size().height();
-
-    // docContent.setTextWidth(this->width()); //Forces Line Breaks.. ToDo maybe create toggle in right-click menu?
-    // docContent.setTextWidth(docContent.size().width());
-
-    // QTextDocument docContent;
-    // QString contentHtml = "<p style=\"text-align: center; white-space: pre-line\">" + readTxt + "</p>";
-    // docContent.setHtml(contentHtml);
-
-    // QTextDocument docContent(readTxt);
-    // docContent.setProperty()
-
-    // int heightForPixmap = qMax(remainingHeight, int(docContent.size().height()));
-    // QPixmap pixmapContent(docContent.size().width(), heightForPixmap);
-
     QPixmap pixmapContent(docContent.size().width(), docContent.size().height());
-
     pixmapContent.fill(Qt::transparent);
     QPainter paintContent(&pixmapContent);
     paintContent.setBrush(Qt::black);
-    // paintContent.setFont(QFont("Serif", 10, QFont::Medium));
-
-    // qDebug() << "pixmapContent.rect().width(): " << pixmapContent.rect().width();
-    // qDebug() << "pixmapContent.rect().height(): " << pixmapContent.rect().height();
-
     docContent.drawContents(&paintContent, pixmapContent.rect());
-    // QPixmap scaledPixmapContent = pixmapContent.scaledToWidth(this->rect().width(), Qt::SmoothTransformation);
-
-    // qDebug() << "(2) remainingHeight: " << remainingHeight;
 
     if(pixmapContent.rect().height() > remainingHeight){
-        // qDebug() << "   IF (pixmapContent.rect().height() > remainingHeight == true)";
         QPixmap scaledPixmapContent = pixmapContent.scaledToHeight(remainingHeight, Qt::SmoothTransformation);
-
-        // QPixmap scaledPixmapContent = (pixmapContent.rect().height() > remainingHeight)
-        //                                   ? pixmapContent.scaledToHeight(remainingHeight, Qt::SmoothTransformation)
-        //                                   : pixmapContent;
-
-        // QPixmap scaledPixmapContent = pixmapContent.scaled(sizeContent, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        //see comment above, same applies now
-
-        // qDebug() << "scaledPixmapContent.width(): " << scaledPixmapContent.width();
-        // qDebug() << "scaledPixmapContent.height(): " << scaledPixmapContent.height();
-
-        // qDebug() << "---";
-
-        // qDebug() << "rectContent.x(): " << rectContent.x();
-        // qDebug() << "rectContent.y(): " << rectContent.y();
-        // qDebug() << "rectContent.width(): " << rectContent.width();
-        // qDebug() << "rectContent.height(): " << rectContent.height();
-
-        // QRect rectForContentCrop(rectContent);
-        // rectForContentCrop.setHeight(rectContent.height() + dividingHeight*2);
-
-        // qDebug() << "rectForContentCrop.x(): " << rectForContentCrop.x();
-        // qDebug() << "rectForContentCrop.y(): " << rectForContentCrop.y();
-        // qDebug() << "rectForContentCrop.width(): " << rectForContentCrop.width();
-        // qDebug() << "rectForContentCrop.height(): " << rectForContentCrop.height();
-
-        // QPixmap croppedPixmapContent = scaledPixmapContent.copy(rectForContentCrop);
-
-        //    inline QPixmap copy(int x, int y, int width, int height) const;
-
         QRect rectForContentCrop(0, 0, this->width() - 1, remainingHeight);
-
         QPixmap croppedPixmapContent = scaledPixmapContent.copy(rectForContentCrop);
-
-        // qDebug() << "---";
-
-        // qDebug() << "croppedPixmapTitle.width(): " << croppedPixmapTitle.width();
-        // qDebug() << "croppedPixmapTitle.height(): " << croppedPixmapTitle.height();
-
-        // qDebug() << "croppedPixmapContent.width(): " << croppedPixmapContent.width();
-        // qDebug() << "croppedPixmapContent.height(): " << croppedPixmapContent.height();
-
         combinedImage.drawPixmap(pointContent, croppedPixmapContent);
     }else{
-        // qDebug() << "   ELSE (pixmapContent.rect().height() <= remainingHeight)";
         QRect rectForUnscaledUncropped(0, dividingHeight, pixmapContent.rect().width(), pixmapContent.rect().height());
 
         combinedImage.drawPixmap(rectForUnscaledUncropped, pixmapContent);
     }
-
-    // qDebug() << "    (/end) PAINT EVENT";
 }
