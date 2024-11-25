@@ -237,7 +237,7 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
 
     contentButton *newContentBtn = new contentButton(this);
 
-    newContentBtn->setTitle(title);
+    newContentBtn->setTitle(title.remove('\n'));
     newContentBtn->setContent(content);
     qDebug() << "contentButton added -> next: add newContentBtn to scrollGrid";
 
@@ -380,6 +380,7 @@ void MainWindow::processAddANewButton(QString defaultText){
 
     this->fixTabOrder();
     this->saveCurrentButtonsAsJson();
+    this->contentBtnList.last()->gainFocus();
 }
 
 void MainWindow::saveCurrentButtonsAsJson(){

@@ -446,6 +446,14 @@ void contentButton::setTitle(QString newTitle){
     if(this->title != newTitle){
         if(newTitle.length() > 0){
             this->title = newTitle;
+
+            //we clip very long titles
+            if(this->title.length() < this->maxTitleLengthForDisplaying){
+                this->titleDisplayed = this->title;
+            }else{
+                this->titleDisplayed = this->title.first(this->maxTitleLengthForDisplaying).append("...");
+            }
+
             this->newEditTitleAction.setText(this->textForEditTitleAct);
             this->removeTitleAction.setVisible(true);
             if(removeTitleActionSeparator){
@@ -482,6 +490,14 @@ void contentButton::setContent(QString newContent){
         this->enableCopyContent();
     }else{
         this->disableCopyContent();
+    }
+
+    //for very long content (many characters or many lines), display "..."
+    if(this->content.count('\n') > this->maxContentLinesForDisplaying
+        || this->content.length() > this->maxContentLengthForDisplaying){
+        this->contentDisplayed = "...";
+    }else{
+        this->contentDisplayed = this->content;
     }
 
     //ToDo check this part.. maybe create "updateText" function? Maybe use repaint? Think about this again if paintEvent is changed
@@ -583,14 +599,7 @@ void contentButton::paintEvent(QPaintEvent *event){
 
     QPainter combinedImage(this);
 
-    QString titleToBeUsed;
-    if(this->title.length() < this->maxTitleLengthForDisplaying){
-        titleToBeUsed = this->title;
-    }else{
-        titleToBeUsed = this->title.first(this->maxTitleLengthForDisplaying).append("...");
-    }
-
-    QTextDocument docTitle(titleToBeUsed);
+    QTextDocument docTitle(this->titleDisplayed);
     QTextOption optTitle(Qt::AlignHCenter);
     docTitle.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
     docTitle.setDefaultTextOption(optTitle);
@@ -631,9 +640,7 @@ void contentButton::paintEvent(QPaintEvent *event){
     QPoint pointContent(0, dividingHeight);
     QSize sizeContent(this->width() - 1, remainingHeight); //ToDo check the "-1" of height
 
-    QString contentToBeUsed = this->content.length() > this->maxContentLengthForDisplaying ? "..." : this->content;
-
-    QTextDocument docContent(contentToBeUsed);
+    QTextDocument docContent(this->contentDisplayed);
     docContent.setDefaultFont(QFont("Times", 12, QFont::Medium));
     docTitle.adjustSize();
 
