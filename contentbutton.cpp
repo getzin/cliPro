@@ -198,6 +198,7 @@ bool contentButton::isFocused() const{
 }
 
 void contentButton::setAsFocusedButton(){
+    qDebug() << "start: setAsFocusedButton";
     if(this->isNotFocused()){
         this->setFocus();
         if(this->isMarkedForDeletion()){
@@ -207,6 +208,7 @@ void contentButton::setAsFocusedButton(){
         }
         contentButton::focusedButton = this;
     }
+    qDebug() << "end: setAsFocusedButton";
 }
 
 void contentButton::unsetAsFocusedButton(){
@@ -229,6 +231,7 @@ void contentButton::unsetAsLastUnfocusedButton(){
 }
 
 void contentButton::gainFocus(){
+    qDebug() << "start: gainFocus";
     contentButton::clearFocusedButton();
     this->setAsFocusedButton();
 }
@@ -332,14 +335,14 @@ void contentButton::copyContentToClipboard(){
     if(this->content.length() > 0){
         QGuiApplication::clipboard()->setText(this->content);
     }else{
-        timedPopUp(this,defaultShortPopUpTimer,"Button content is empty.<br>Will not copy to clipboard.");
+        timedPopUp(this, defaultVeryShortPopUpTimer, "No content", "Button content is empty.<br>Will not copy to clipboard.");
     }
 }
 
 void contentButton::pasteContentFromClipboard(){
     bool save = true;
-    QString textToPaste = QGuiApplication::clipboard()->text();
-    if(textToPaste.length() > 0){
+    QString clipboardText = QGuiApplication::clipboard()->text();
+    if(clipboardText.length() > 0){
         if(this->getContent().length() > 0){
             qDebug() << "There already is text!";
             QMessageBox::StandardButton reply;
@@ -358,7 +361,12 @@ void contentButton::pasteContentFromClipboard(){
             this->repaint();
         }
     }else{
-        timedPopUp(this,defaultShortPopUpTimer,"Clipboard does not have any text data.<br>Button content won't be overwritten.");
+        if(this->getContent().length() > 0){
+            timedPopUp(this, defaultShortPopUpTimer, "Invalid clipboard data", "Clipboard does not have valid text data."
+                                                                               "<br>Button content won't be overwritten.");
+        }else{
+            timedPopUp(this, defaultVeryShortPopUpTimer, "Invalid clipboard data", "Clipboard does not have valid text data.");
+        }
     }
 }
 

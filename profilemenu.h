@@ -15,8 +15,11 @@ class profileMenu : public QDialog
 public:
     explicit profileMenu(QWidget *parent = nullptr);
     ~profileMenu();
+    qsizetype getProfilesCount();
     QString getCurrSelProfileName() const;
+    static void createProfilesFolderIfNotExist();
     static QString constructFilePathForProfileJson(QString profileName);
+    static QString const profilesFolderName;
 
 signals:
     void selProfileHasChanged(QString newProfileName, bool);
@@ -52,6 +55,7 @@ private:
     qsizetype savedIDOffset = 0; //comes into play when deleting items with lower index than the currentActiveProfile,
                                  //value "grows" but will only ever subtracted from currentActiveProfile
     bool currentActiveProfHasBeenDeleted = false;
+    bool editDelAreEnabled = true;
     QStringList internalProfilesList;
 
     void constructVisibleListFromInternal();
@@ -64,6 +68,8 @@ private:
 
     void setEditDelEnabled();
     void setEditDelDisabled();
+    void checkProfilesCountAndSetEditDel();
+    void resetFocusedButton();
 };
 
 #endif // PROFILEMENU_H

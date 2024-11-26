@@ -9,6 +9,8 @@
 
 #include "apputils.h"
 
+QString const profileMenu::profilesFolderName = "/profiles/";
+
 profileMenu::profileMenu(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::profileMenu)
@@ -80,6 +82,7 @@ void profileMenu::constructVisibleListFromInternal(){
         qDebug() << "ID (" << this->currentActiveProfile << ") lies out of bounds... init as -1 instead.";
         this->ui->visibleProfileList->setCurrentRow(-1);
     }
+    this->checkProfilesCountAndSetEditDel();
     this->currentActiveProfHasBeenDeleted = false; //reset
     this->savedIDOffset = 0;
     qDebug() << "End : initVisibleListFromInternal";
@@ -172,7 +175,7 @@ void profileMenu::saveProfiles(){
 
     bool indexOK = false;
     qsizetype tmpListSize = this->internalProfilesList.count();
-    if(tmpListSize > 1){
+    if(tmpListSize > 0){
         qDebug() << "1 or more profiles exist! (good)";
         if(this->ui->visibleProfileList->selectedItems().count() == 1){
 
@@ -272,12 +275,13 @@ void profileMenu::deleteButtonPressed(){
     }else{
         ; //do nothing?
     }
-    //ToDo check case where ALL PROFILES get deleted!! (what happens? what SHOULD happen?)
 }
 
 void profileMenu::commonCloseActions(){
+    qDebug() << "start: common close actions";
     this->constructVisibleListFromInternal();
     this->unsavedActions.clear();
+    this->resetFocusedButton();
     this->close();
 }
 
@@ -286,8 +290,16 @@ void profileMenu::cancelButtonPressed(){
     this->commonCloseActions();
 }
 
+void profileMenu::createProfilesFolderIfNotExist(){
+    QString profilesFolderPath = QDir::currentPath() + profileMenu::profilesFolderName;
+    if(!(QDir(profilesFolderPath).exists())){
+        QDir().mkdir(profilesFolderPath);
+        //ToDo what do if this fails?
+    }
+}
+
 QString profileMenu::constructFilePathForProfileJson(QString profileName){
-    return (QDir::currentPath() + "/profiles/" + (profileName)) + ".json";
+    return (QDir::currentPath() + profileMenu::profilesFolderName + (profileName)) + ".json";
 }
 
 void profileMenu::renameProfilesJson(QString oldName, QString newName){
@@ -303,13 +315,12 @@ void profileMenu::renameProfilesJson(QString oldName, QString newName){
 void profileMenu::createNewProfilesJson(QString name){
     qDebug() << "createNewProfilesJson. input: " << name;
     //QString namePath = constructFilePathForProfileJson(name);
-    ; //ToDo create some kind of default json
     emit this->newProfileCreated(name);
 }
 
 void profileMenu::deleteProfilesJson(QString name){
     qDebug() << "deleteProfilesJson. input: " << name;
-    QString namePath = constructFilePathForProfileJson(name);
+    QString namePath = this->constructFilePathForProfileJson(name);
     qDebug() << "deleteProfilesJson. path: " << namePath;
     bool deleteSuccess = QFile::remove(namePath);
     qDebug() << "deleteSuccess: " << deleteSuccess;
@@ -323,7 +334,7 @@ void profileMenu::processProfilesActions(){
 
     qDebug() << "start: processProfilesActions";
     while(!(this->unsavedActions.empty())){
-        profAction act = unsavedActions.takeFirst();
+        profAction act = this->unsavedActions.takeFirst();
         qDebug() << "input: " << act.delName << ", " << act.newName;
         if(!act.delName.isEmpty() && !act.newName.isEmpty()){
             this->renameProfilesJson(act.delName, act.newName);
@@ -341,35 +352,28 @@ void profileMenu::processProfilesActions(){
 void profileMenu::saveButtonPressed(){
     qDebug() << "start: saveButtonPressed";
 
-    //do not allow saving when no profile has been selected?
-    //(or just make it so that you can't add/delete items without having a profile?)
-    if(!(this->ui->visibleProfileList->selectedItems().empty())){
-        qDebug() << "list of visible profiles is not empty!";
-        this->saveVisibleListToInternal();
-        this->saveProfiles();
+    this->saveVisibleListToInternal();
+    this->saveProfiles();
 
-        //3 possible cases:
-        // 1) delete files of all profiles that were deleted
-        // 2) create new default JSON files for all new profiles
-        // 3) rename files to new names
-        this->processProfilesActions();
+    //3 possible cases:
+    // 1) delete files of all profiles that were deleted
+    // 2) create new default JSON files for all new profiles
+    // 3) rename files to new names
+    this->processProfilesActions();
 
-        qDebug() << "currentActiveProfile: " << currentActiveProfile;
-        qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
+    qDebug() << "currentActiveProfile: " << currentActiveProfile;
+    qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
 
-        if(indexIsInBounds(this->currentActiveProfile, this->internalProfilesList.count())){
-            qDebug() << "currentActiveProfile is valid";
-            emit this->selProfileHasChanged(this->internalProfilesList.at(this->currentActiveProfile), this->currentActiveProfHasBeenDeleted);
-        }else{
-            qDebug() << "currentActiveProfile is invalid";
-            emit this->selProfileHasChanged("", this->currentActiveProfHasBeenDeleted);
-        }
-        this->currentActiveProfHasBeenDeleted = false; //reset
-        this->hide();
+    if(indexIsInBounds(this->currentActiveProfile, this->internalProfilesList.count())){
+        qDebug() << "currentActiveProfile is valid";
+        emit this->selProfileHasChanged(this->internalProfilesList.at(this->currentActiveProfile), this->currentActiveProfHasBeenDeleted);
     }else{
-        timedPopUp(this, defaultLongPopUpTimer, "<p align='center'>Please<br><b>select a profile</b><br>to continue.</p>");
-        qDebug() << "no profile selected!";
+        qDebug() << "currentActiveProfile is invalid";
+        emit this->selProfileHasChanged("", this->currentActiveProfHasBeenDeleted);
     }
+    this->currentActiveProfHasBeenDeleted = false; //reset
+    this->resetFocusedButton();
+    this->hide();
 }
 
 void profileMenu::handleProfileNameEdited(QString oldName, QString newName){
@@ -395,6 +399,10 @@ void profileMenu::handleNewProfileCreation(QString newName){
     this->dialog.close();
 }
 
+qsizetype profileMenu::getProfilesCount(){
+    return this->internalProfilesList.count();
+}
+
 QString profileMenu::getCurrSelProfileName() const{
     if(indexIsInBounds(this->currentActiveProfile, this->internalProfilesList.count())){
         return this->internalProfilesList.at(this->currentActiveProfile);
@@ -405,7 +413,7 @@ QString profileMenu::getCurrSelProfileName() const{
 
 void profileMenu::handleSelectedProfileChanged(){
     qDebug() << "start: handleSelectionChange";
-    if(ui->visibleProfileList->selectedItems().count() > 0){
+    if(this->ui->visibleProfileList->selectedItems().count() > 0){
         qDebug() << "enable";
         this->setEditDelEnabled();
     }else{
@@ -416,17 +424,40 @@ void profileMenu::handleSelectedProfileChanged(){
 }
 
 void profileMenu::setEditDelEnabled(){
-    this->ui->btnEdit->setEnabled(true);
-    this->ui->btnDelete->setEnabled(true);
+    if(this->editDelAreEnabled == false){
+        this->ui->btnEdit->setEnabled(true);
+        this->ui->btnDelete->setEnabled(true);
+        this->editDelAreEnabled = true;
+    }
 }
 
 void profileMenu::setEditDelDisabled(){
-    this->ui->btnEdit->setDisabled(true);
-    this->ui->btnDelete->setDisabled(true);
+    if(this->editDelAreEnabled == true){
+        this->ui->btnEdit->setDisabled(true);
+        this->ui->btnDelete->setDisabled(true);
+        this->editDelAreEnabled = false;
+    }
 }
 
 void profileMenu::handleRejectedSignal(){
     qDebug() << "rejected!";
     this->commonCloseActions();
     emit this->profMenuRejected();
+}
+
+void profileMenu::checkProfilesCountAndSetEditDel(){
+    if(this->ui->visibleProfileList->count() > 0
+        && this->ui->visibleProfileList->selectedItems().count() > 0){
+        this->setEditDelEnabled();
+    }else{
+        this->setEditDelDisabled();
+    }
+}
+
+void profileMenu::resetFocusedButton(){
+    if(this->editDelAreEnabled == true){
+        this->ui->btnEdit->setFocus();
+    }else{
+        this->ui->btnNew->setFocus();
+    }
 }

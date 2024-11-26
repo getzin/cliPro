@@ -9,8 +9,9 @@ class dynAddRmButton : public QPushButton
 
 public:
     enum btnMode {
-        btnModeADD = 0,
-        btnModeRM = 1,
+        btnModeDISABLED = 0,
+        btnModeADD = 1,
+        btnModeRM = 2,
     };
     explicit dynAddRmButton(QWidget *parent);
     ~dynAddRmButton();
@@ -22,7 +23,6 @@ signals:
 
 public slots:
     void setMode(dynAddRmButton::btnMode mode = btnModeADD);
-    void switchMode();
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -31,6 +31,7 @@ private:
     btnMode currBtnMode = btnModeADD;
     void setStyleSheetAdd();
     void setStyleSheetRm();
+    void setStyleSheetDisabled();
 
 };
 

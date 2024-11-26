@@ -167,18 +167,21 @@ void profileNameDialog::processOKbuttonPressed(){
                 }
             }else{
                 QString tmpErrorStr;
-                tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list!<br>Please choose another name.");
-                timedPopUp(this, defaultLongPopUpTimer, tmpErrorStr);
+                tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list!"
+                                                                   "<br>Please choose another name.");
+                timedPopUp(this, defaultShortPopUpTimer, "Error: Duplicate name", tmpErrorStr);
                 qDebug() << "Input (" << userInput << ") is a duplicate!";
             }
         }else{
             QString tmpErrorStr;
-            tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string.<br>Only alphanumeric characters, _ and - are allowed.");
-            timedPopUp(this, defaultLongPopUpTimer, tmpErrorStr);
+            tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string."
+                                                               "<br>Only alphanumeric characters, _ and - are allowed."
+                                                               "<br>(No spaces, $, !, ?, ...)");
+            timedPopUp(this, defaultShortPopUpTimer, "Error: Invalid string", tmpErrorStr);
             qDebug() << "Input not OK";
         }
     }else{
-        timedPopUp(this, defaultLongPopUpTimer, "Empty name is not allowed.");
+        timedPopUp(this, defaultShortPopUpTimer, "ERROR", "Empty name is not allowed.");
         qDebug() << "Input is empty!";
     }
 }

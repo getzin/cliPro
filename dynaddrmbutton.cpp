@@ -15,7 +15,7 @@ dynAddRmButton::dynAddRmButton(QWidget *parent)
 
     this->setFont(font);
     this->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
-    this->setMode(btnModeADD);
+    this->setMode(btnModeDISABLED);
 }
 
 dynAddRmButton::~dynAddRmButton() {
@@ -34,11 +34,18 @@ void dynAddRmButton::setStyleSheetAdd(){
 
 void dynAddRmButton::setStyleSheetRm(){
     qDebug() << "start: setStyleSheetRm";
-    // this->setPalette(QPalette(QColor(200,200,200)));
     this->setStyleSheet("dynAddRmButton { color: darkred; border: 1px solid red; border-radius: 10%;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffb9a9, stop:1 #ff9d88) }"
                         "dynAddRmButton:focus { color: darkred; border: 2px solid red; border-radius: 10%; outline: none;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffa490, stop:1 #ff8166) }");
+}
+
+void dynAddRmButton::setStyleSheetDisabled(){
+    qDebug() << "start: setStyleSheetDisabled";
+    this->setStyleSheet("dynAddRmButton { color: black; border: 1px solid darkgray; border-radius: 10%;"
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #e2e2e2, stop:1 #cbcbcb) }"
+                        "dynAddRmButton:focus { color: black; border: 2px solid darkgray; border-radius: 10%; outline: none;"
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #e2e2e2, stop:1 #cbcbcb) }");
 }
 
 
@@ -48,20 +55,20 @@ void dynAddRmButton::setMode(dynAddRmButton::btnMode mode){
         this->setText("+");
         this->setStyleSheetAdd();
         this->currBtnMode = btnModeADD;
-    }else{
+    }else if(mode == btnModeRM){
         this->setText("-");
         this->setStyleSheetRm();
         this->currBtnMode = btnModeRM;
+    }else if(mode == btnModeDISABLED){
+        this->setText("?");
+        this->setStyleSheetDisabled();
+        this->currBtnMode = btnModeDISABLED;
+    }else{
+        qDebug() << "invalid mode.";
     }
     qDebug() << "emit: mainWindowButtonsNeedSwitch";
-    emit this->mainWindowButtonsNeedSwitch(mode);
+    emit this->mainWindowButtonsNeedSwitch(this->currBtnMode);
     qDebug() << "end: setMode";
-}
-
-void dynAddRmButton::switchMode(){
-    qDebug() << "start: switch mode";
-    this->setMode(currBtnMode == btnModeADD ? btnModeRM : btnModeADD);
-    qDebug() << "end: switch mode";
 }
 
 dynAddRmButton::btnMode dynAddRmButton::getCurrBtnMode() const{

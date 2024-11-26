@@ -9,7 +9,6 @@
 #include <QJsonArray>
 #include <QSettings>
 #include <QSizeGrip>
-#include <QDir>
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QMimeData>
@@ -30,43 +29,22 @@ MainWindow::MainWindow(QWidget *parent)
     this->setWindowTitle(appSettings::appName);
     this->setFocusPolicy(Qt::StrongFocus); //without this, arrow keys do not work
     this->setMinimumSize(this->minWindowSize_w, this->minWindowSize_h);
+
+    profileMenu::createProfilesFolderIfNotExist();
+
     this->loadAppSettings();
+    this->currSelectedProfileName = this->profMenu.getCurrSelProfileName();
 
-    this->currSelectedProfileName = profMenu.getCurrSelProfileName();
-    qDebug() << "currSelectedProfileName: " << currSelectedProfileName;
-
-    if(this->currSelectedProfileName == nullptr || this->currSelectedProfileName == ""){
-        this->pathToFileForSelectedProfile = "";
-        qDebug() << "Profile name is invalid. Load default app settings instead.";
-    }else{
-        this->pathToFileForSelectedProfile = profileMenu::constructFilePathForProfileJson(this->currSelectedProfileName);
-        qDebug() << "pathToFileForSelectedProfile: " << pathToFileForSelectedProfile;
-
-        bool jsonFileExists = QFile::exists(pathToFileForSelectedProfile);
-        qDebug() << "File exists? -> " << jsonFileExists;
-
-        //check if file even exists
-        if(!jsonFileExists){
-            qDebug() << "jsonFile of path " << pathToFileForSelectedProfile + "does not exist";
-
-            //create default file instead
-            this->saveDefaultJsonForProfile(pathToFileForSelectedProfile);
-
-            //ToDo init default state of App or something...
-            //for now just open the profiles Menu, which forces creation of a profile
-            //profMenu->show(); //WARNING does not appear in center of main window, since that is not shown yet (OK for now)
-            //loadDefaultAppState();
-        }else{
-            //loads all existing buttons before ADDING(!) the dynamic +/- button
-            this->loadButtonsFromJson();
-            qDebug() << "All buttons loaded.";
-        }
-        this->setDisplayedProfileName(this->currSelectedProfileName);
-    }
-
+    this->loadJsonOrCreateDefault();
     this->setUpUnmarkAllBtn();
     this->addDynBtnAtEndOfContentButtons();
+    this->updateProfileSettingsValidity();
     this->fixTabOrder();
+
+    if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeDISABLED){
+        qDebug() << "CURR MODE >> DISABLED! (next: adjust buttons)";
+        adjustButtons(dynAddRmButton::btnModeDISABLED);
+    }
 
     this->ui->hSpace1->changeSize(10,0);
     this->ui->hSpace2->changeSize(5,0);
@@ -109,6 +87,39 @@ MainWindow::~MainWindow()
     this->saveAppSettings();
     this->saveCurrentButtonsAsJson();
     delete this->ui;
+}
+
+void MainWindow::loadJsonOrCreateDefault(){
+    qDebug() << "start: loadJsonOrCreateDefault";
+    qDebug() << "currSelectedProfileName: " << this->currSelectedProfileName;
+    if(this->currSelectedProfileName == nullptr || this->currSelectedProfileName == ""){
+        this->pathToFileForSelectedProfile = "";
+        this->setDisplayedProfileName("<create here>");
+    }else{
+        this->pathToFileForSelectedProfile = profileMenu::constructFilePathForProfileJson(this->currSelectedProfileName);
+        qDebug() << "pathToFileForSelectedProfile: " << this->pathToFileForSelectedProfile;
+
+        bool jsonFileExists = QFile::exists(this->pathToFileForSelectedProfile);
+        qDebug() << "File exists? -> " << jsonFileExists;
+
+        //check if file even exists
+        if(!jsonFileExists){
+            qDebug() << "jsonFile of path " << this->pathToFileForSelectedProfile + "does not exist";
+
+            //create default file instead
+            this->saveDefaultJsonForProfile(pathToFileForSelectedProfile);
+
+            //ToDo init default state of App or something...
+            //for now just open the profiles Menu, which forces creation of a profile
+            //profMenu->show(); //WARNING does not appear in center of main window, since that is not shown yet (OK for now)
+            //loadDefaultAppState();
+        }else{
+            //loads all existing buttons before ADDING(!) the dynamic +/- button
+            this->loadButtonsFromJson();
+            qDebug() << "All buttons loaded.";
+        }
+        this->setDisplayedProfileName(this->currSelectedProfileName);
+    }
 }
 
 void MainWindow::fixTabOrder(){
@@ -200,43 +211,32 @@ void MainWindow::setUpUnmarkAllBtn(){
 }
 
 void MainWindow::addDynBtnAtEndOfContentButtons(){
-
     qDebug() << "start: addDynBtnAtEndOfContentButtons";
 
-    // qsizetype currItemCount = this->contentBtnList.count();
     qsizetype currScrollGridCount = this->ui->scrollGrid->count();
-    qDebug() << "currItemCount: " << currScrollGridCount;
+    qDebug() << "currScrollGridCount: " << currScrollGridCount;
 
-    qsizetype row4dynBtn = (currScrollGridCount) / this->maxItemsPerRow;
-    qsizetype col4dynBtn = (currScrollGridCount) % this->maxItemsPerRow;
-    qDebug() << "dynBtn row/col: " << row4dynBtn << col4dynBtn;
+    qsizetype row = (currScrollGridCount) / this->maxItemsPerRow;
+    qsizetype col = (currScrollGridCount) % this->maxItemsPerRow;
+    qDebug() << "dynBtn row: " << row << ", " << col;
 
-    this->ui->scrollGrid->addWidget(&(this->dynBtn), row4dynBtn, col4dynBtn);
+    this->ui->scrollGrid->addWidget(&(this->dynBtn), row, col);
     qDebug() << "dynBtn added to widget";
 
     qDebug() << "(after adding dynBtn) scroll grid count: "
              << this->ui->scrollGrid->count() << " (row count: "
              << this->ui->scrollGrid->rowCount() << ", column count: "
              << this->ui->scrollGrid->columnCount() << ")";
-
-    if(contentBtnCount::getMarkedForDelCnt() > 0){
-        qDebug() << "MODE >> RM!";
-        this->dynBtn.setMode(dynAddRmButton::btnModeRM);
-    }else{
-        qDebug() << "MODE >> ADD!";
-        this->dynBtn.setMode(dynAddRmButton::btnModeADD);
-    }
 }
 
 void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString title, QString content){
-    qDebug() << "scroll grid count: " << this->ui->scrollGrid->count() << " (row count: "
+    qDebug() << "(create and add new button) scroll grid count: "
+             << this->ui->scrollGrid->count() << " (row count: "
              << this->ui->scrollGrid->rowCount() << ", column count: "
              << this->ui->scrollGrid->columnCount() << ")";
 
     qDebug() << "insert at: " << " (" << row << "," << col << ")";
-
     contentButton *newContentBtn = new contentButton(this);
-
     newContentBtn->setTitle(title.remove('\n'));
     newContentBtn->setContent(content);
     qDebug() << "contentButton added -> next: add newContentBtn to scrollGrid";
@@ -259,6 +259,8 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
 void MainWindow::loadButtonsFromJson(){
 
     qDebug() << "start: loadButtonsFromJson";
+
+    qDebug() << "currSelectedProfileName: " << this->currSelectedProfileName;
     qDebug() << "Open file: " << this->pathToFileForSelectedProfile;
 
     QFile file(this->pathToFileForSelectedProfile);
@@ -304,7 +306,6 @@ void MainWindow::loadButtonsFromJson(){
     qDebug() << "jsonObjAllButtons.count(): " << jsonObjAllButtons.count();
     qDebug() << "jsonObjAllButtons.value(): " << jsonObjAllButtons.value("contentButtons");
 
-    //ToDo: combine lines
     QJsonValue contentButtonsArrAsVal = jsonObjAllButtons.value("contentButtons");
     QJsonArray contentButtonsArr = contentButtonsArrAsVal.toArray();
 
@@ -316,15 +317,6 @@ void MainWindow::loadButtonsFromJson(){
         qDebug() << "i (" << i << ")" << contentButtonsArr.at(i);
 
         QJsonObject contentButtonObj = contentButtonsArr.at(i).toObject();
-
-        // QStringList keyStrList = contentButtonObj.keys();
-        // qDebug() << "keyStrList: " << keyStrList;
-
-        //note: ID is only used for keeping the JSON content in order while saving
-        //ToDo sort the contentButtonsArr by id values
-        // QJsonValue contentButtonValID = contentButtonObj.value("id");
-        // qDebug() << "contentButtonValID: " << contentButtonValID;
-
         QJsonValue contentButtonValTitle = contentButtonObj.value("title");
         QJsonValue contentButtonValContent = contentButtonObj.value("content");
         qDebug() << "contentButtonValContent: " << contentButtonValContent << "\n";
@@ -334,53 +326,27 @@ void MainWindow::loadButtonsFromJson(){
 
         qsizetype row = i / this->maxItemsPerRow;
         qsizetype col = i % this->maxItemsPerRow;
-
         this->createAndAddNewButton(row,col,contentButtonValTitleAsStr,contentButtonValContentAsStr);
     }
     this->updateIndexOfAllButtons();
 }
 
 void MainWindow::processAddANewButton(QString defaultText){
-
-    //ToDo check if a profile has even been selected before...
-    //      or initialize app with "default profile" or something?
-
-    qDebug() << "Add new button";
-
-    qsizetype currItemCount = this->ui->scrollGrid->count();
-
-    qsizetype row4dynBtn = (currItemCount) / this->maxItemsPerRow;
-    qsizetype col4dynBtn = (currItemCount) % this->maxItemsPerRow;
-
-    //take out the dynBtn, we will re-insert it later
-    // QLayoutItem *dynButton = this->ui->scrollGrid->takeAt(currItemCount-1);
+    qDebug() << "start: processAddANewButton";
     this->ui->scrollGrid->removeWidget(&(this->dynBtn));
-
-    //CHECK IF NEEDED (see: https://doc.qt.io/qt-6/qlayout.html#takeAt)
-    // if (i.widget())
-    //     delete i.widget();
-    // if (i.layout())
-    //     delete i.layout();
-
-    qsizetype row = (currItemCount - 1) / this->maxItemsPerRow;
-    qsizetype col = (currItemCount - 1) % this->maxItemsPerRow;
-
+    qsizetype row = this->ui->scrollGrid->count() / this->maxItemsPerRow;
+    qsizetype col = this->ui->scrollGrid->count() % this->maxItemsPerRow;
     this->createAndAddNewButton(row,col,"",defaultText);
-    this->updateIndexOfAllButtons();
-    this->saveButtonsAsJson(this->pathToFileForSelectedProfile,this->contentBtnList); //ToDo optimize "saveJSONforSingleButton" (or similar)
-
-    //re-insert dynBtn
-    // this->ui->scrollGrid->addWidget(dynButton->widget(), row4dynBtn, col4dynBtn);
-    this->ui->scrollGrid->addWidget(&(this->dynBtn), row4dynBtn, col4dynBtn);
+    this->addDynBtnAtEndOfContentButtons();
 
     qDebug() << "(post) count: "
              << this->ui->scrollGrid->count() << " (row: "
              << this->ui->scrollGrid->rowCount() << ", column:"
              << this->ui->scrollGrid->columnCount() << ")\n\n";
 
+    this->updateIndexOfAllButtons();
     this->fixTabOrder();
-    this->saveCurrentButtonsAsJson();
-    this->contentBtnList.last()->gainFocus();
+    this->saveCurrentButtonsAsJson(); //ToDo optimize "saveJSONforSingleButton" (or similar)
 }
 
 void MainWindow::saveCurrentButtonsAsJson(){
@@ -395,9 +361,7 @@ void MainWindow::saveDefaultJsonForProfile(QString pathToFile){
 }
 
 void MainWindow::saveButtonsAsJson(QString pathToFile, QVector<contentButton*> listOfBtns){
-
     qDebug() << "start: saveButtonsAsJson (pathToFile: " << pathToFile << ")";
-
     //making sure not to safe into an empty string, this case should technically never happen,
     //unless somehow no profile is selected which also should never happen... but there is a chance
     //that it could happen by manually editing the .ini file while the app is already opened (or when it is opened twice)
@@ -433,6 +397,7 @@ void MainWindow::saveButtonsAsJson(QString pathToFile, QVector<contentButton*> l
     jsonDoc.setObject(jsonObjAllButtons);
     outStream << jsonDoc.toJson();
     file.close();
+    qDebug() << "end: saveButtonsAsJson";
 }
 
 void MainWindow::unmarkAllContentButtons(){
@@ -447,15 +412,14 @@ void MainWindow::unmarkAllContentButtons(){
 
 void MainWindow::doDefaultFocus(){
     qDebug() << "start: doDefaultFocus";
-    if(this->contentBtnList.empty()){
-        qDebug() << "list is empty. Give focus to dynBtn.";
-        //if the contentBtnList is empty, set the focus on the dynBtn
-        this->dynBtn.setFocus();
-    }else{
-        qDebug() << "list is NOT empty.";
+    if(this->ui->scrollGrid->count() > 0){
+        qDebug() << "scrollGrid is NOT empty.";
         //if list is not empty, just set the focus on the first button
-        qsizetype index = this->getProperIndex(0);
+        qsizetype index = this->getSearchAdjustedIndexIfSearchIsActive(0);
         this->contentBtnList.at(index)->gainFocus();
+    }else{
+        qDebug() << "scrollGrid is empty. Give focus to dynBtn.";
+        this->dynBtn.setFocus();
     }
 }
 
@@ -493,7 +457,8 @@ qsizetype MainWindow::getAdjustedNewIndexForSearch(qsizetype newIndex){
     return newIndex;
 }
 
-qsizetype MainWindow::getProperIndex(qsizetype index){
+qsizetype MainWindow::getSearchAdjustedIndexIfSearchIsActive(qsizetype index){
+    qDebug() << "start: getSearchAdjustedIndexIfSearchIsActive";
     if(this->searchActive){
         index = this->getAdjustedNewIndexForSearch(index);
     }
@@ -593,18 +558,32 @@ void MainWindow::processSingleButtonDeletion(qsizetype indexOfSender){
         this->saveCurrentButtonsAsJson();
 
         //give focus to the button that now resides in the removed button's place (or dynBtn)
-        if(indexIsInBounds(indexOfSender, this->contentBtnList.count())){
-            this->contentBtnList.at(indexOfSender)->gainFocus();
-        }else{
+        qDebug() << "give focus to the button that now resides in the removed button's place (or dynBtn)";
+        qsizetype adjustedIndex = this->getAdjustedIndexOfSenderForSearch(indexOfSender);
+        qDebug() << "indexOfSender: " << indexOfSender;
+        qDebug() << "adjustedIndex: " << adjustedIndex;
+        qDebug() << "scrollGrid Count: " << this->ui->scrollGrid->count();
+        bool focusDynBtn = true;
+        if(indexIsInBounds(adjustedIndex, this->ui->scrollGrid->count())){
+            qDebug() << "index is in bounds";
+            QLayoutItem *item = this->ui->scrollGrid->itemAt(adjustedIndex);
+            if(item){
+                QWidget *wdgt = item->widget();
+                if(wdgt && wdgt != &this->dynBtn){
+                    contentButton *btn = (contentButton*)wdgt;
+                    btn->gainFocus();
+                    focusDynBtn = false;
+                }
+            }
+        }
+        if(focusDynBtn){
             this->dynBtn.setFocus();
         }
-
     }else if(reply == QMessageBox::No){
         qDebug() << "No clicked";
         ; //do nothing (?)
     }else{
         qDebug() << "Reset clicked";
-
         contentButton *cntBtnLstItem = this->contentBtnList.at(indexOfSender);
         if(cntBtnLstItem && cntBtnLstItem->isFocused()){
             qDebug() << "Item does exist and is selected right now";
@@ -626,6 +605,7 @@ void MainWindow::processMinusKey(){
 void MainWindow::processEscapeKey(){
     qDebug() << "start: processEscapeKey";
     this->ui->textInputField->clearFocus();
+    this->dynBtn.clearFocus();
     contentButton::clearFocusedButton();
     contentButton::clearLastUnfocusedButton();
     this->unmarkAllContentButtons();
@@ -644,7 +624,7 @@ void MainWindow::processRemainingKeys(int key){
             contentButton::clearFocusedButton(); //this is done to make it equal to pressing the profile button, otherwise there is different (buggy) behaviour
             this->profMenu.show();
         }else{
-            timedPopUp(this, defaultShortPopUpTimer, "Can't enter profile menu<br>while search is active.");
+            timedPopUp(this, defaultVeryShortPopUpTimer, "Not allowed", "Can't enter profile menu<br>while search is active.");
         }
     }else if(key == Qt::Key_S){
         qDebug() << "key == S";
@@ -661,26 +641,31 @@ void MainWindow::processRemainingKeys(int key){
 }
 
 void MainWindow::processDynBtnMainAction(){
-    if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeADD){
-        this->processAddANewButton("");
-    }else if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeRM){
-        this->processRemoveAllMarkedButtons();
-    }else{
-        qDebug() << "current button mode is invalid.";
+    if(this->checkProfileSettingsValidPopUpIfNot()){
+        if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeADD){
+            this->processAddANewButton("");
+            this->contentBtnList.last()->gainFocus();
+        }else if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeRM){
+            this->processRemoveAllMarkedButtons();
+        }else{
+            qDebug() << "button mode is invalid.";
+        }
     }
 }
 
 void MainWindow::processDynBtnKeyPress(int key){
     qDebug() << "start: processDynBtnKeyPress";
-    if(key == Qt::Key_Left || key == Qt::Key_Right
-        || key == Qt::Key_Up || key == Qt::Key_Down){
-        //expl: The dynBtn is always at the very end of all buttons
-        //so that's the index we will be working with
-        this->processArrowKeyPress(key, this->contentBtnList.count());
-    }else if(key == Qt::Key_Return || key == Qt::Key_Enter){
-        this->processDynBtnMainAction();
-    }else{
-        this->processRemainingKeys(key);
+    if(key == Qt::Key_P || this->profileSettingsValid == true){
+        if(key == Qt::Key_Left || key == Qt::Key_Right
+            || key == Qt::Key_Up || key == Qt::Key_Down){
+            //expl: The dynBtn is always at the very end of all buttons
+            //so that's the index we will be working with
+            this->processArrowKeyPress(key, this->contentBtnList.count());
+        }else if(key == Qt::Key_Return || key == Qt::Key_Enter){
+            this->processDynBtnMainAction();
+        }else{
+            this->processRemainingKeys(key);
+        }
     }
     qDebug() << "end: processDynBtnKeyPress";
 }
@@ -709,24 +694,26 @@ void MainWindow::processContentButtonKeyPress(int key, qsizetype indexOfSender){
 void MainWindow::keyPressEvent(QKeyEvent *event){
     qDebug() << "start: key press event! (MainWindow)";
     int key = event->key();
-    qDebug() << "got key! (" << QKeySequence(key).toString() << ")";
-    if(key == Qt::Key_Left || key == Qt::Key_Right
-               || key == Qt::Key_Up || key == Qt::Key_Down){
-        qDebug() << "Arrow Key!";
-        this->doDefaultFocus();
-    }else if(key == Qt::Key_Return || key == Qt::Key_Enter){
-        qDebug() << "Enter pressed on MainWindow.";
-        Qt::KeyboardModifiers mod = event->modifiers();
-        if(mod == Qt::CTRL || mod == Qt::SHIFT){
-            if(this->ui->textInputField->hasFocus() || this->ui->buttonAdd->hasFocus()){
-                qDebug() << "Text field or add button has focus!";
-                this->processActionForAddButton();
+    if(key == Qt::Key_P || this->profileSettingsValid == true){
+        qDebug() << "got key! (" << QKeySequence(key).toString() << ")";
+        if(key == Qt::Key_Left || key == Qt::Key_Right
+            || key == Qt::Key_Up || key == Qt::Key_Down){
+            qDebug() << "Arrow Key!";
+            this->doDefaultFocus();
+        }else if(key == Qt::Key_Return || key == Qt::Key_Enter){
+            qDebug() << "Enter pressed on MainWindow.";
+            Qt::KeyboardModifiers mod = event->modifiers();
+            if(mod == Qt::CTRL || mod == Qt::SHIFT){
+                if(this->ui->textInputField->hasFocus() || this->ui->buttonAdd->hasFocus()){
+                    qDebug() << "Text field or add button has focus!";
+                    this->processActionForAddButton();
+                }
+            }else{
+                this->ui->buttonSearch->click();
             }
         }else{
-            this->ui->buttonSearch->click();
+            this->processRemainingKeys(key);
         }
-    }else{
-        this->processRemainingKeys(key);
     }
     qDebug() << "end: Key press event! (MainWindow)";
 }
@@ -737,6 +724,7 @@ void MainWindow::processActionForAddButton(){
     if(!currInputFieldText.isEmpty()){
         qDebug() << "There is text.";
         this->processAddANewButton(currInputFieldText);
+        this->contentBtnList.last()->gainFocus();
         this->ui->textInputField->setText("");
     }else{
         qDebug() << "No text in field.";
@@ -781,6 +769,40 @@ void MainWindow::resetSearchStatusOfAllButtons(){
         this->contentBtnList.at(i)->resetSearchStatus();
     }
     this->rebuildGrid();
+}
+
+void MainWindow::popUpForProfileSettingsInvalid(){
+    timedPopUp(this, defaultLongPopUpTimer, "No profiles",
+               "Creation of a new profile is required."
+               "<br>Afterwards buttons can be added."
+               "<br>"
+               "<br>Please press <b>create here</b> at the top or"
+               "<br>open the profiles menu by pressing <b>P</b>.");
+}
+
+void MainWindow::updateProfileSettingsValidity(){
+    if(this->profMenu.getProfilesCount() > 0 && this->currSelectedProfileName.length() > 0){
+        if(this->profileSettingsValid == false){
+            if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeDISABLED){
+                this->dynBtn.setMode(dynAddRmButton::btnModeADD);
+            }
+        }
+        this->profileSettingsValid = true;
+    }else{
+        if(this->profileSettingsValid == true){
+            this->dynBtn.setMode(dynAddRmButton::btnModeDISABLED);
+        }
+        this->profileSettingsValid = false;
+    }
+}
+
+bool MainWindow::checkProfileSettingsValidPopUpIfNot(){
+    if(this->profileSettingsValid){
+        return true;
+    }else{
+        this->popUpForProfileSettingsInvalid();
+        return false;
+    }
 }
 
 void MainWindow::processActionForSearchButton(){
@@ -899,7 +921,6 @@ void MainWindow::deleteAllItemsFromGrid(){
         this->ui->scrollGrid->removeWidget(this->contentBtnList.at(i));
     }
     this->ui->scrollGrid->removeWidget(&(this->dynBtn));
-
     qDebug() << "scrollGrid row count: " << this->ui->scrollGrid->rowCount();
     qDebug() << "scrollGrid column count: " << this->ui->scrollGrid->columnCount();
 }
@@ -908,6 +929,7 @@ void MainWindow::buildGridFromContentList(){
     qDebug() << "ui->scrollGrid->count(): " << this->ui->scrollGrid->count();
     qsizetype newIndexInGrid = 0;
     for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
+        qDebug() << "button i: " << i;
         contentButton *contentBtnToBeAdded = this->contentBtnList.at(i);
         // QString newBtnTxt = QString(QString::number(row) + "," + QString::number(col));
         if(contentBtnToBeAdded->getSearchStatus() != contentButton::searchStatusNoMatch){
@@ -947,7 +969,6 @@ void MainWindow::processRemoveAllMarkedButtons(){
 
         this->removeAllButtonsThatAreMarkedForDel();
         this->saveCurrentButtonsAsJson();
-        // this->dynBtn.switchMode();
 
     }else if(reply == QMessageBox::No){
         qDebug() << "No clicked";
@@ -963,20 +984,19 @@ void MainWindow::profileButtonClicked(){
     qDebug() << "start: profile button clicked";
 
     //clear button selection before opening the menu
-    // contentButton::clearFocusedButton(); //ToDo check if this is still desired..?
     this->profMenu.show();
 
     qDebug() << "profiles view should now be active...";
 }
 
 void MainWindow::clearContentButtonList(){
-    qDebug() << "count of contentBtnList: " << this->contentBtnList.count();
+    qDebug() << "(clear list) count of contentBtnList: " << this->contentBtnList.count();
     while(this->contentBtnList.count()){
         contentButton* tmpContentButton = this->contentBtnList.takeFirst();
         delete tmpContentButton;
         qDebug() << "count of contentBtnList: " << this->contentBtnList.count();
     }
-    qDebug() << "count of scrollGrid items: " << this->ui->scrollGrid->count();
+    qDebug() << "(clear list) count of scrollGrid items: " << this->ui->scrollGrid->count();
 }
 
 void MainWindow::changeProfileName(QString newName){
@@ -990,38 +1010,34 @@ void MainWindow::setDisplayedProfileName(QString name){
     this->ui->buttonProfile->setText(name);
 }
 
-//ToDo check if profileName is even needed... remove if not
 void MainWindow::updateButtonsForProfileChange(QString profileName, bool currentActiveProfHasBeenDeleted){
     qDebug() << "start: updateButtonsForProfileChange";
     qDebug() << "received name: " << profileName;
     qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
-    if(profileName == ""){
-        qDebug() << "invalid profileName.. load default.";
-        //ToDo load default stuff
+    if(profileName == this->currSelectedProfileName && currentActiveProfHasBeenDeleted == false){
+        qDebug() << "Profile is already the current selected one, no change, do nothing.";
     }else{
-        if(profileName == this->currSelectedProfileName && currentActiveProfHasBeenDeleted == false){
-            qDebug() << "Profile is already the current selected one, no change, do nothing.";
-        }else{
+        if(this->profileSettingsValid){
             if(currentActiveProfHasBeenDeleted == false){
                 qDebug() << "current active profile has NOT been deleted --> save current buttons!";
                 this->saveCurrentButtonsAsJson();
             }else{
                 qDebug() << "current active profile HAS been deleted --> skip saving buttons";
             }
-            this->clearContentButtonList();
-            this->changeProfileName(profileName);
-
-            //ToDo what do when this part fails?
-            this->loadButtonsFromJson();
-            this->rebuildGrid();
-
-            qDebug() << "count of contentBtnList: " << this->contentBtnList.count();
-            qDebug() << "count of scrollGrid items: " << this->ui->scrollGrid->count();
-
-            this->dynBtn.setMode(dynAddRmButton::btnModeADD);
-            this->setDisplayedProfileName(this->currSelectedProfileName);
+        }else{
+            qDebug() << "previous profileSettings were invalid. No need to save.";
         }
+        this->clearContentButtonList();
+        this->changeProfileName(profileName);
+
+        //ToDo what do when this part fails?
+        this->loadJsonOrCreateDefault();
+        this->rebuildGrid();
+
+        qDebug() << "(update buttons) count of contentBtnList: " << this->contentBtnList.count();
+        qDebug() << "(update buttons) count of scrollGrid items: " << this->ui->scrollGrid->count();
     }
+    this->updateProfileSettingsValidity();
     qDebug() << "end: updateButtonsForProfileChange";
 }
 
@@ -1071,17 +1087,23 @@ void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
     qDebug() << "start: adjustButtons";
     this->adjustMenuOfContentButtons(mode);
     if(mode == dynAddRmButton::btnModeADD){
-        qDebug() << "ADD";
+        qDebug() << "ADD (in adjustButtons)";
         this->ui->textInputField->show();
         this->ui->buttonSearch->show();
         this->ui->buttonAdd->show();
         this->unmarkAllBtn.hide();
     }else if(mode == dynAddRmButton::btnModeRM){
-        qDebug() << "RM";
+        qDebug() << "RM (in adjustButtons)";
         this->ui->textInputField->hide();
         this->ui->buttonSearch->hide();
         this->ui->buttonAdd->hide();
         this->unmarkAllBtn.show();
+    }else if(mode == dynAddRmButton::btnModeDISABLED){
+        qDebug() << "DISABLED (in adjustButtons)";
+        this->ui->textInputField->hide();
+        this->ui->buttonSearch->hide();
+        this->ui->buttonAdd->hide();
+        this->unmarkAllBtn.hide();
     }else{
         qDebug() << "mode: " << mode << " is not a valid mode..";
     }

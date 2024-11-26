@@ -3,13 +3,13 @@
 #include <QMessageBox>
 #include <QTimer>
 
-void timedPopUp(QWidget *parent, int timer_ms, QString message){
+void timedPopUp(QWidget *parent, int timer_ms, QString windowTitle, QString message){
     QMessageBox msgBox(parent);
     QTimer::singleShot(timer_ms, &msgBox, &QMessageBox::close);
     msgBox.setStandardButtons(QMessageBox::Close);
     msgBox.setDefaultButton(QMessageBox::Close);
     msgBox.setText(message);
-    msgBox.setWindowTitle("ERROR"); //ToDo maybe set via parameter
+    msgBox.setWindowTitle(windowTitle); //ToDo maybe set via parameter
     msgBox.exec();
 }
 

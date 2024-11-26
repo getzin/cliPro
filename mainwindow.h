@@ -48,6 +48,7 @@ private slots:
     void processRemoveAllMarkedButtons();
 
 private:
+    void loadJsonOrCreateDefault();
     void fixTabOrder();
     void loadAppSettings();
     void saveAppSettings();
@@ -73,7 +74,7 @@ private:
     qsizetype getHiddenButtonCount();
     qsizetype getAdjustedIndexOfSenderForSearch(qsizetype indexOfSender);
     qsizetype getAdjustedNewIndexForSearch(qsizetype newIndex);
-    qsizetype getProperIndex(qsizetype index);
+    qsizetype getSearchAdjustedIndexIfSearchIsActive(qsizetype index);
     void processArrowKeyPress(int key, qsizetype indexOfSender);
     void setUpUnmarkAllBtn();
     void adjustMenuOfContentButtons(dynAddRmButton::btnMode mode);
@@ -83,6 +84,9 @@ private:
     void setSearchInactive();
     void checkSearchMatchForAllButtons(QString searchString);
     void resetSearchStatusOfAllButtons();
+    void popUpForProfileSettingsInvalid();
+    void updateProfileSettingsValidity();
+    bool checkProfileSettingsValidPopUpIfNot();
 
     Ui::MainWindow *ui;
     QVector<contentButton*> contentBtnList;
@@ -96,6 +100,7 @@ private:
 
     QPushButton unmarkAllBtn;
 
+    bool profileSettingsValid = false;
     bool searchActive = false;
     static const QClipboard *clipboard;
     static int constexpr stretchOfUnmarkAllBtn = 28; //this value has to be determined empirically
