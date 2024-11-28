@@ -48,6 +48,7 @@ private slots:
     void processRemoveAllMarkedButtons();
 
 private:
+    void updatePlaceholderProfileNameText();
     void loadJsonOrCreateDefault();
     void fixTabOrder();
     void loadAppSettings();
@@ -70,6 +71,10 @@ private:
     void setDisplayedProfileName(QString name);
     void rebuildGrid();
     void removeSelectedButton(qsizetype index);
+    void focusContentButton(contentButton *btn);
+    void focusDynBtn();
+    void focusHackSolution();
+    void widgetFocusWrap(QWidget *wdgt);
     void doDefaultFocus();
     qsizetype getHiddenButtonCount();
     qsizetype getAdjustedIndexOfSenderForSearch(qsizetype indexOfSender);

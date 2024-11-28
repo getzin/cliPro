@@ -307,8 +307,15 @@ void profileMenu::renameProfilesJson(QString oldName, QString newName){
     QString oldNamePath = this->constructFilePathForProfileJson(oldName);
     QString newNamePath = this->constructFilePathForProfileJson(newName);
     qDebug() << "renameProfilesJson. paths: " << oldNamePath << ", " << newNamePath;
-    bool renameSuccess = QFile::rename(oldNamePath, newNamePath);
+    bool fileExistsAlready = QFile(newNamePath).exists();
+    qDebug() << "fileExistsAlready? " << fileExistsAlready;
+    if(fileExistsAlready){
+        qDebug() << "delete existing file!";
+        bool deleteSuccess = QFile::remove(newNamePath);
+        qDebug() << "deleteSuccess: " << deleteSuccess;
+    }
     //ToDo what if fails?
+    bool renameSuccess = QFile::rename(oldNamePath, newNamePath);
     qDebug() << "renameSuccess: " << renameSuccess;
 }
 
@@ -409,6 +416,15 @@ QString profileMenu::getCurrSelProfileName() const{
     }else{
         return "";
     }
+}
+
+bool profileMenu::checkIfProfileIsInList(QString nameToCheck){
+    for(int i = 0; i < this->internalProfilesList.count(); ++i){
+        if(this->internalProfilesList.at(i) == nameToCheck){
+            return true;
+        }
+    }
+    return false;
 }
 
 void profileMenu::handleSelectedProfileChanged(){

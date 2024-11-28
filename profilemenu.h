@@ -17,6 +17,7 @@ public:
     ~profileMenu();
     qsizetype getProfilesCount();
     QString getCurrSelProfileName() const;
+    bool checkIfProfileIsInList(QString nameToCheck);
     static void createProfilesFolderIfNotExist();
     static QString constructFilePathForProfileJson(QString profileName);
     static QString const profilesFolderName;

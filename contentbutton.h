@@ -38,8 +38,8 @@ public:
     void setIndexInList(qsizetype index);
     qsizetype getIndexInList() const;
 
-    void enableCopyContent();
-    void disableCopyContent();
+    void enableCopyCutRemoveContent();
+    void disableCopyCutRemoveContent();
     void enablePasteContent();
     void disablePasteContent();
     void enableDeleteAllMarked();
@@ -74,9 +74,11 @@ protected:
 
 private slots:
     void titleAdjust();
+    void removeTitle();
     void copyContentToClipboard();
     void pasteContentFromClipboard();
-    void removeTitle();
+    void cutContentToClipboard();
+    void removeContent();
     void switchMarkedForDeletion();
     void deleteThisButton();
     void emitDeleteAllSignal();
@@ -94,6 +96,7 @@ private:
     void setStyleMarkedForDelAndFocus();
 
     void checkForDynBtnSwitch();
+    void clearContent();
 
     void openOptionsMenu(QPoint p);
     void mouseLeftClick();
@@ -104,12 +107,16 @@ private:
     QAction removeTitleAction;
     QAction copyContentAction;
     QAction pasteContentAction;
+    QAction cutContentAction;
+    QAction removeContentAction;
     QAction markForDeleteAction;
     QAction deleteAllMarkedAction;
     QAction deleteButtonAction;
     QAction* removeTitleActionSeparator; //we enable/disable this separator depending on button state
     QAction* copyContentActionSeparator; //we enable/disable this separator depending on button content
     QAction* pasteContentActionSeparator; //we enable/disable this separator depending on clipboard content
+    QAction* cutContentActionSeparator; //we enable/disable this separator depending on button content
+    QAction* removeContentActionSeparator; //we enable/disable this separator depending on button content
     QAction* deleteAllMarkedActionSeparator; //we enable/disable this separator depening on markedCount (>0 or not)
 
     qsizetype indexInList = -1;
@@ -133,6 +140,8 @@ private:
     static QString const textForRemoveTitleAct;
     static QString const textForCopyContentAct;
     static QString const textForPasteContentAct;
+    static QString const textForCutContentAct;
+    static QString const textForRemoveContentAct;
     static QString const textForMarkDeletionAct;
     static QString const textForUnmarkDeletionAct;
     static QString const textForDeleteAllMarkedAct;

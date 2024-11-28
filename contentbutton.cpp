@@ -20,6 +20,8 @@ QString const contentButton::textForEditTitleAct = "Edit title";
 QString const contentButton::textForRemoveTitleAct = "Remove title";
 QString const contentButton::textForCopyContentAct = "Copy content";
 QString const contentButton::textForPasteContentAct = "Paste content";
+QString const contentButton::textForCutContentAct = "Cut content";
+QString const contentButton::textForRemoveContentAct = "Remove content";
 QString const contentButton::textForMarkDeletionAct = "Mark for deletion";
 QString const contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
 QString const contentButton::textForDeleteAllMarkedAct = "Delete ALL marked";
@@ -31,6 +33,8 @@ contentButton::contentButton(QWidget *parent)
     removeTitleAction(this->textForRemoveTitleAct, this),
     copyContentAction(this->textForCopyContentAct, this),
     pasteContentAction(this->textForPasteContentAct, this),
+    cutContentAction(this->textForCutContentAct, this),
+    removeContentAction(this->textForRemoveContentAct, this),
     markForDeleteAction(this->textForMarkDeletionAct, this),
     deleteAllMarkedAction(this->textForDeleteAllMarkedAct, this),
     deleteButtonAction(this->textForDeleteButton, this)
@@ -66,6 +70,18 @@ contentButton::contentButton(QWidget *parent)
     this->optionsMenu.addAction(&(this->pasteContentAction));
     this->pasteContentAction.setVisible(false);
 
+    //cut content
+    this->cutContentActionSeparator = this->optionsMenu.addSeparator();
+    this->cutContentActionSeparator->setVisible(false);
+    this->optionsMenu.addAction(&(this->cutContentAction));
+    this->cutContentAction.setVisible(false);
+
+    //delete content
+    this->removeContentActionSeparator = this->optionsMenu.addSeparator();
+    this->removeContentActionSeparator->setVisible(false);
+    this->optionsMenu.addAction(&(this->removeContentAction));
+    this->removeContentAction.setVisible(false);
+
     //mark for deletion
     this->optionsMenu.addSeparator();
     this->optionsMenu.addAction(&(this->markForDeleteAction));
@@ -82,9 +98,11 @@ contentButton::contentButton(QWidget *parent)
 
     //---qt connects---
     connect(&(this->newEditTitleAction), SIGNAL(triggered()), this, SLOT(titleAdjust()));
+    connect(&(this->removeTitleAction), SIGNAL(triggered()), this, SLOT(removeTitle()));
     connect(&(this->copyContentAction), SIGNAL(triggered()), this, SLOT(copyContentToClipboard()));
     connect(&(this->pasteContentAction), SIGNAL(triggered()), this, SLOT(pasteContentFromClipboard()));
-    connect(&(this->removeTitleAction), SIGNAL(triggered()), this, SLOT(removeTitle()));
+    connect(&(this->cutContentAction), SIGNAL(triggered()), this, SLOT(cutContentToClipboard()));
+    connect(&(this->removeContentAction), SIGNAL(triggered()), this, SLOT(removeContent()));
     connect(&(this->markForDeleteAction), SIGNAL(triggered()), this, SLOT(switchMarkedForDeletion()));
     connect(&(this->deleteAllMarkedAction), SIGNAL(triggered()), this, SLOT(emitDeleteAllSignal()));
     connect(&(this->deleteButtonAction), SIGNAL(triggered()), this, SLOT(deleteThisButton()));
@@ -198,8 +216,9 @@ bool contentButton::isFocused() const{
 }
 
 void contentButton::setAsFocusedButton(){
-    qDebug() << "start: setAsFocusedButton";
+    qDebug() << "start: setAsFocusedButton (this->id: " << this->indexInList;
     if(this->isNotFocused()){
+        qDebug() << "was not focused";
         this->setFocus();
         if(this->isMarkedForDeletion()){
             this->setStyleMarkedForDelAndFocus();
@@ -276,6 +295,11 @@ void contentButton::keyPressEvent(QKeyEvent *event){
         }else{
             emit this->startContentButtonEdit(this->getIndexInList());
         }
+    }else if(key == Qt::Key_Backspace){
+        this->removeContent();
+    }else if(key == Qt::Key_X){
+        this->cutContentToClipboard();
+        this->repaint();
     }else if(key == Qt::Key_C){
         this->copyContentToClipboard();
     }else if(key == Qt::Key_V){
@@ -285,7 +309,7 @@ void contentButton::keyPressEvent(QKeyEvent *event){
                || key == Qt::Key_Escape || key == Qt::Key_Plus
                || key == Qt::Key_P || key == Qt::Key_S){
         emit this->keyWasPressed(key, this->getIndexInList());
-    }else if(key == Qt::Key_Delete || key == Qt::Key_Backspace){
+    }else if(key == Qt::Key_Delete){
         Qt::KeyboardModifiers mod = event->modifiers();
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
             this->switchMarkedForDeletion();
@@ -302,13 +326,6 @@ void contentButton::keyPressEvent(QKeyEvent *event){
         }
     }
     qDebug() << "end: Key press event! (contentButton)";
-}
-
-void contentButton::mouseLeftClick(){
-    qDebug() << "Left Button on a contentButton!";
-    QFocusEvent* focus = new QFocusEvent(QEvent::MouseButtonPress, Qt::MouseFocusReason);
-    this->focusInEvent(focus);
-    delete focus;
 }
 
 void contentButton::titleAdjust(){
@@ -346,7 +363,6 @@ void contentButton::pasteContentFromClipboard(){
         if(this->getContent().length() > 0){
             qDebug() << "There already is text!";
             QMessageBox::StandardButton reply;
-
             reply = QMessageBox::question(this, "Override confirmation",
                                           "Do you really want to override the existing content for this button?"
                                           "<br><br><i><b><u>WARNING:</u></b> This action is <b>irreversible!</b></i>",
@@ -370,19 +386,65 @@ void contentButton::pasteContentFromClipboard(){
     }
 }
 
-void contentButton::enableCopyContent(){
-    qDebug() << "start: Enable text copying.";
+void contentButton::clearContent(){
+    this->content.clear();
+    this->contentDisplayed.clear();
+    this->disableCopyCutRemoveContent();
+}
+
+void contentButton::cutContentToClipboard(){
+    if(this->content.length() > 0){
+        QGuiApplication::clipboard()->setText(this->content);
+        this->clearContent();
+    }else{
+        timedPopUp(this, defaultVeryShortPopUpTimer, "No content", "Button content is empty.<br>Will not cut to clipboard.");
+    }
+}
+
+void contentButton::removeContent(){
+    if(this->content.length() > 0){
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::question(this, "Remove content confirmation",
+                                      "Do you really want to remove the content of this button?"
+                                      "<br><br><i><b><u>WARNING:</u></b> This action is <b>irreversible!</b></i>",
+                                      QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
+        if(reply == QMessageBox::Yes){
+            this->clearContent();
+        }
+    }else{
+        qDebug() << "button content is already empty, got nothing to delete.";
+    }
+}
+
+void contentButton::enableCopyCutRemoveContent(){
+    qDebug() << "start: Enable text copying, cutting and deletion.";
     this->copyContentAction.setVisible(true);
     if(this->copyContentActionSeparator){
         this->copyContentActionSeparator->setVisible(true);
     }
+    this->cutContentAction.setVisible(true);
+    if(this->cutContentActionSeparator){
+        this->cutContentActionSeparator->setVisible(true);
+    }
+    this->removeContentAction.setVisible(true);
+    if(this->removeContentActionSeparator){
+        this->removeContentActionSeparator->setVisible(true);
+    }
 }
 
-void contentButton::disableCopyContent(){
-    qDebug() << "start: Disable text copying.";
+void contentButton::disableCopyCutRemoveContent(){
+    qDebug() << "start: Disable text copying, cutting and deletion.";
     this->copyContentAction.setVisible(false);
     if(this->copyContentActionSeparator){
         this->copyContentActionSeparator->setVisible(false);
+    }
+    this->cutContentAction.setVisible(false);
+    if(this->cutContentActionSeparator){
+        this->cutContentActionSeparator->setVisible(false);
+    }
+    this->removeContentAction.setVisible(false);
+    if(this->removeContentActionSeparator){
+        this->removeContentActionSeparator->setVisible(false);
     }
 }
 
@@ -401,7 +463,6 @@ void contentButton::disablePasteContent(){
         this->pasteContentActionSeparator->setVisible(false);
     }
 }
-
 
 void contentButton::enableDeleteAllMarked(){
     qDebug() << "start: Enable delete all marked.";
@@ -491,27 +552,20 @@ QString contentButton::getContent() const{
 
 void contentButton::setContent(QString newContent){
     qDebug() << "start: setButtonContent";
+    if(newContent.length() > 0){
+        this->content = newContent;
+        this->enableCopyCutRemoveContent();
 
-    this->content = newContent;
-
-    if(this->content.length() > 0){
-        this->enableCopyContent();
+        //for very long content (many characters or many lines), display "..."
+        if(this->content.count('\n') > this->maxContentLinesForDisplaying
+            || this->content.length() > this->maxContentLengthForDisplaying){
+            this->contentDisplayed = "...";
+        }else{
+            this->contentDisplayed = this->content;
+        }
     }else{
-        this->disableCopyContent();
+        this->removeContent();
     }
-
-    //for very long content (many characters or many lines), display "..."
-    if(this->content.count('\n') > this->maxContentLinesForDisplaying
-        || this->content.length() > this->maxContentLengthForDisplaying){
-        this->contentDisplayed = "...";
-    }else{
-        this->contentDisplayed = this->content;
-    }
-
-    //ToDo check this part.. maybe create "updateText" function? Maybe use repaint? Think about this again if paintEvent is changed
-    //this->setText(this->buttonTitle);
-    //this->repaint()
-
     qDebug() << "end: setButtonContent";
 }
 
@@ -533,6 +587,13 @@ void contentButton::resetSearchStatus(){
 
 contentButton::searchStatus contentButton::getSearchStatus(){
     return this->buttonMatchesSearch;
+}
+
+void contentButton::mouseLeftClick(){
+    qDebug() << "Left Button on a contentButton!";
+    QFocusEvent* focus = new QFocusEvent(QEvent::MouseButtonPress, Qt::MouseFocusReason);
+    this->focusInEvent(focus);
+    delete focus;
 }
 
 void contentButton::mouseRightClick(QMouseEvent *event){

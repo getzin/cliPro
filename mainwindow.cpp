@@ -89,12 +89,20 @@ MainWindow::~MainWindow()
     delete this->ui;
 }
 
+void MainWindow::updatePlaceholderProfileNameText(){
+    if(this->profMenu.getProfilesCount() > 0){
+        this->setDisplayedProfileName("<select here>");
+    }else{
+        this->setDisplayedProfileName("<create here>");
+    }
+}
+
 void MainWindow::loadJsonOrCreateDefault(){
     qDebug() << "start: loadJsonOrCreateDefault";
     qDebug() << "currSelectedProfileName: " << this->currSelectedProfileName;
     if(this->currSelectedProfileName == nullptr || this->currSelectedProfileName == ""){
         this->pathToFileForSelectedProfile = "";
-        this->setDisplayedProfileName("<create here>");
+        this->updatePlaceholderProfileNameText();
     }else{
         this->pathToFileForSelectedProfile = profileMenu::constructFilePathForProfileJson(this->currSelectedProfileName);
         qDebug() << "pathToFileForSelectedProfile: " << this->pathToFileForSelectedProfile;
@@ -239,6 +247,9 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
     contentButton *newContentBtn = new contentButton(this);
     newContentBtn->setTitle(title.remove('\n'));
     newContentBtn->setContent(content);
+    if(this->clipboard->text().length() > 0){
+        newContentBtn->enablePasteContent();
+    }
     qDebug() << "contentButton added -> next: add newContentBtn to scrollGrid";
 
     this->ui->scrollGrid->addWidget(newContentBtn, row, col);
@@ -280,7 +291,7 @@ void MainWindow::loadButtonsFromJson(){
     fileAsString = inStream.readAll();
     file.close();
 
-    qDebug() << "File as string: " << fileAsString << "\n\n";
+    qDebug() << "File as string: " << fileAsString;
 
     QByteArray jsonBA = fileAsString.toLocal8Bit(); //BA = ByteArray
     QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonBA);
@@ -310,7 +321,7 @@ void MainWindow::loadButtonsFromJson(){
     QJsonArray contentButtonsArr = contentButtonsArrAsVal.toArray();
 
     qDebug() << "contentButtonsArr: " << contentButtonsArr <<
-        ".count: " << contentButtonsArr.count() << "\n\n\n";
+        ".count: " << contentButtonsArr.count();
 
     for(qsizetype i = 0; i < contentButtonsArr.count(); ++i){
 
@@ -319,7 +330,7 @@ void MainWindow::loadButtonsFromJson(){
         QJsonObject contentButtonObj = contentButtonsArr.at(i).toObject();
         QJsonValue contentButtonValTitle = contentButtonObj.value("title");
         QJsonValue contentButtonValContent = contentButtonObj.value("content");
-        qDebug() << "contentButtonValContent: " << contentButtonValContent << "\n";
+        qDebug() << "contentButtonValContent: " << contentButtonValContent;
 
         QString contentButtonValTitleAsStr = contentButtonValTitle.toString();
         QString contentButtonValContentAsStr = contentButtonValContent.toString();
@@ -342,7 +353,7 @@ void MainWindow::processAddANewButton(QString defaultText){
     qDebug() << "(post) count: "
              << this->ui->scrollGrid->count() << " (row: "
              << this->ui->scrollGrid->rowCount() << ", column:"
-             << this->ui->scrollGrid->columnCount() << ")\n\n";
+             << this->ui->scrollGrid->columnCount();
 
     this->updateIndexOfAllButtons();
     this->fixTabOrder();
@@ -410,16 +421,43 @@ void MainWindow::unmarkAllContentButtons(){
     }
 }
 
+void MainWindow::focusContentButton(contentButton *btn){
+    qDebug() << "start: focusContentButton";
+    btn->gainFocus();
+    this->ui->scrollArea->ensureWidgetVisible(btn);
+}
+
+void MainWindow::focusDynBtn(){
+    qDebug() << "start: focusDynBtn";
+    this->dynBtn.setFocus();
+    this->ui->scrollArea->ensureWidgetVisible(&(this->dynBtn));
+}
+
+void MainWindow::focusHackSolution(){
+    //after adding a new content button, focusing directly on the last content button will not
+    //scroll down the screen, but instead always scrolls to the very top. Reason unknown...
+    //this hack mostly fixes the issue
+    this->contentBtnList.last()->gainFocus();
+    this->ui->scrollArea->ensureWidgetVisible(&(this->dynBtn));
+}
+
 void MainWindow::doDefaultFocus(){
     qDebug() << "start: doDefaultFocus";
+    bool focusHasBeenSet = false;
     if(this->ui->scrollGrid->count() > 0){
         qDebug() << "scrollGrid is NOT empty.";
         //if list is not empty, just set the focus on the first button
         qsizetype index = this->getSearchAdjustedIndexIfSearchIsActive(0);
-        this->contentBtnList.at(index)->gainFocus();
-    }else{
+        if(indexIsInBounds(index,this->contentBtnList.count())){
+            this->focusContentButton(this->contentBtnList.at(index));
+            focusHasBeenSet = true;
+        }
+    }
+
+    if(!focusHasBeenSet){
         qDebug() << "scrollGrid is empty. Give focus to dynBtn.";
-        this->dynBtn.setFocus();
+        this->focusDynBtn();
+
     }
 }
 
@@ -532,7 +570,7 @@ void MainWindow::processArrowKeyPress(int key, qsizetype indexOfSender){
     qDebug() << "(after adj.) newIndex: " << newIndex;
 
     if(indexIsInBounds(newIndex, this->contentBtnList.count())){
-        this->contentBtnList.at(newIndex)->gainFocus();
+        this->focusContentButton(this->contentBtnList.at(newIndex));
     }else{
         this->doDefaultFocus();
     }
@@ -563,7 +601,7 @@ void MainWindow::processSingleButtonDeletion(qsizetype indexOfSender){
         qDebug() << "indexOfSender: " << indexOfSender;
         qDebug() << "adjustedIndex: " << adjustedIndex;
         qDebug() << "scrollGrid Count: " << this->ui->scrollGrid->count();
-        bool focusDynBtn = true;
+        bool focusHasBeenSet = false;
         if(indexIsInBounds(adjustedIndex, this->ui->scrollGrid->count())){
             qDebug() << "index is in bounds";
             QLayoutItem *item = this->ui->scrollGrid->itemAt(adjustedIndex);
@@ -571,13 +609,13 @@ void MainWindow::processSingleButtonDeletion(qsizetype indexOfSender){
                 QWidget *wdgt = item->widget();
                 if(wdgt && wdgt != &this->dynBtn){
                     contentButton *btn = (contentButton*)wdgt;
-                    btn->gainFocus();
-                    focusDynBtn = false;
+                    this->focusContentButton(btn);
+                    focusHasBeenSet = true;
                 }
             }
         }
-        if(focusDynBtn){
-            this->dynBtn.setFocus();
+        if(!focusHasBeenSet){
+            this->focusDynBtn();
         }
     }else if(reply == QMessageBox::No){
         qDebug() << "No clicked";
@@ -620,12 +658,8 @@ void MainWindow::processRemainingKeys(int key){
     }else if(key == Qt::Key_Escape){
         this->processEscapeKey();
     }else if(key == Qt::Key_P){
-        if(!(this->searchActive)){
-            contentButton::clearFocusedButton(); //this is done to make it equal to pressing the profile button, otherwise there is different (buggy) behaviour
-            this->profMenu.show();
-        }else{
-            timedPopUp(this, defaultVeryShortPopUpTimer, "Not allowed", "Can't enter profile menu<br>while search is active.");
-        }
+        contentButton::clearFocusedButton(); //this is done to make it equal to pressing the profile button, otherwise there is different (buggy) behaviour
+        this->profMenu.show();
     }else if(key == Qt::Key_S){
         qDebug() << "key == S";
         if(this->searchActive){
@@ -644,7 +678,7 @@ void MainWindow::processDynBtnMainAction(){
     if(this->checkProfileSettingsValidPopUpIfNot()){
         if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeADD){
             this->processAddANewButton("");
-            this->contentBtnList.last()->gainFocus();
+            this->focusHackSolution();
         }else if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeRM){
             this->processRemoveAllMarkedButtons();
         }else{
@@ -724,18 +758,16 @@ void MainWindow::processActionForAddButton(){
     if(!currInputFieldText.isEmpty()){
         qDebug() << "There is text.";
         this->processAddANewButton(currInputFieldText);
-        this->contentBtnList.last()->gainFocus();
-        this->ui->textInputField->setText("");
+        this->ui->textInputField->setText(""); //keep this before focus logic or else this will cause
+                                               //"pseudo focused content buttons" for some strange reason...
+        this->focusHackSolution();
     }else{
         qDebug() << "No text in field.";
     }
-    //give focus to the newly added button (will be the last in list)
-    this->contentBtnList.last()->gainFocus();
 }
 
 void MainWindow::setSearchActive(){
     if(!this->searchActive){
-        this->ui->buttonProfile->setDisabled(true);
         this->ui->buttonAdd->setDisabled(true);
         this->ui->textInputField->setDisabled(true);
         this->ui->textInputField->setStyleSheet("color: black; border: 1px solid black; border-radius: 30%; font-weight: bold;"
@@ -754,6 +786,7 @@ void MainWindow::setSearchInactive(){
         this->ui->textInputField->setStyleSheet("");
         this->ui->buttonSearch->setStyleSheet("");
         this->searchActive = false;
+        qDebug() << "end of setSearchInactive (search was active before)";
     }
 }
 
@@ -772,12 +805,21 @@ void MainWindow::resetSearchStatusOfAllButtons(){
 }
 
 void MainWindow::popUpForProfileSettingsInvalid(){
-    timedPopUp(this, defaultLongPopUpTimer, "No profiles",
-               "Creation of a new profile is required."
-               "<br>Afterwards buttons can be added."
-               "<br>"
-               "<br>Please press <b>create here</b> at the top or"
-               "<br>open the profiles menu by pressing <b>P</b>.");
+    if(this->profMenu.getProfilesCount() > 0){
+        timedPopUp(this, defaultLongPopUpTimer, "No profile selected",
+                   "Selection of a profile is required."
+                   "<br>Afterwards buttons can be added."
+                   "<br>"
+                   "<br>Please press <b>select here</b> at the top or"
+                   "<br>open the profiles menu by pressing <b>P</b>.");
+    }else{
+        timedPopUp(this, defaultLongPopUpTimer, "No profiles",
+                   "Creation of a new profile is required."
+                   "<br>Afterwards buttons can be added."
+                   "<br>"
+                   "<br>Please press <b>create here</b> at the top or"
+                   "<br>open the profiles menu by pressing <b>P</b>.");
+    }
 }
 
 void MainWindow::updateProfileSettingsValidity(){
@@ -1000,8 +1042,6 @@ void MainWindow::clearContentButtonList(){
 }
 
 void MainWindow::changeProfileName(QString newName){
-    // delete currSelectedProfileName;
-    // this->currSelectedProfileName = new QString(newName);
     this->currSelectedProfileName = newName;
     this->pathToFileForSelectedProfile = profileMenu::constructFilePathForProfileJson(currSelectedProfileName);
 }
@@ -1016,11 +1056,19 @@ void MainWindow::updateButtonsForProfileChange(QString profileName, bool current
     qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
     if(profileName == this->currSelectedProfileName && currentActiveProfHasBeenDeleted == false){
         qDebug() << "Profile is already the current selected one, no change, do nothing.";
+        if(profileName == ""){
+            this->updatePlaceholderProfileNameText();
+        }
     }else{
         if(this->profileSettingsValid){
             if(currentActiveProfHasBeenDeleted == false){
-                qDebug() << "current active profile has NOT been deleted --> save current buttons!";
-                this->saveCurrentButtonsAsJson();
+                qDebug() << "current active profile has NOT been deleted";
+                if(this->profMenu.checkIfProfileIsInList(this->currSelectedProfileName)){
+                    qDebug() << "current active profile is still in list --> save current buttons!";
+                    this->saveCurrentButtonsAsJson();
+                }else{
+                    qDebug() << "current active profile is no longer in list of profiles --> skip saving buttons";
+                }
             }else{
                 qDebug() << "current active profile HAS been deleted --> skip saving buttons";
             }
@@ -1037,7 +1085,15 @@ void MainWindow::updateButtonsForProfileChange(QString profileName, bool current
         qDebug() << "(update buttons) count of contentBtnList: " << this->contentBtnList.count();
         qDebug() << "(update buttons) count of scrollGrid items: " << this->ui->scrollGrid->count();
     }
+
+    if(this->searchActive){
+        qDebug() << "Search is active!";
+        this->ui->buttonSearch->click(); //basically disables the search
+        this->setSearchInactive();
+    }
     this->updateProfileSettingsValidity();
+    this->ui->buttonProfile->setFocus();
+    // this->ui->scrollArea->scroll(0,0); //scroll to top
     qDebug() << "end: updateButtonsForProfileChange";
 }
 
@@ -1063,7 +1119,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event){
     contentButton::clearFocusedButton();
     contentButton::clearLastUnfocusedButton();
     if(this->contentBtnList.empty()){
-        this->dynBtn.setFocus();
+        this->focusDynBtn();
     }else{
         this->ui->centralwidget->setFocus();
     }
