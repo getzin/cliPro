@@ -9,6 +9,7 @@
 #include "dynaddrmbutton.h"
 #include "profilemenu.h"
 #include "buttonedit.h"
+#include "movebutton.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {

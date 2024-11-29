@@ -32,9 +32,6 @@ void moveButton::openMenu(qsizetype index, qsizetype maxIndex){
     this->ui->valueSlider->setMaximum(maxIndex);
     this->ui->valueSlider->setValue(index);
 
-    // this->ui->valueInput->setFocusProxy(this->ui->btnSave);
-    // this->ui->valueInput->setFocus();
-
     this->ui->btnSave->setFocus();
     this->ui->btnSave->setFocusProxy(this->ui->valueInput);
 

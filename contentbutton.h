@@ -9,7 +9,6 @@
 
 #include "contentbtncount.h"
 #include "dynaddrmbutton.h"
-#include "movebutton.h"
 
 class contentButton : public QPushButton, public contentBtnCount
 {

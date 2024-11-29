@@ -14,7 +14,6 @@
 #include <QMimeData>
 
 #include "apputils.h"
-#include "movebutton.h"
 
 const QClipboard *MainWindow::clipboard = nullptr;
 

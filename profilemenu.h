@@ -69,8 +69,8 @@ private:
 
     void setEditDelEnabled();
     void setEditDelDisabled();
+    void fixTabOrder();
     void checkProfilesCountAndSetEditDel();
-    void resetFocusedButton();
 };
 
 #endif // PROFILEMENU_H

@@ -20,6 +20,7 @@ profileMenu::profileMenu(QWidget *parent)
 
     this->ui->setupUi(this);
     this->ui->visibleProfileList->setSortingEnabled(true);
+
     this->setWindowTitle("Pick a profile");
     this->setModal(true);
 
@@ -31,6 +32,16 @@ profileMenu::profileMenu(QWidget *parent)
     for(qsizetype i = 0; i < this->internalProfilesList.count(); ++i){
         qDebug() << "profilesList.at(" << i << ") : " << internalProfilesList.at(i);
     }
+
+    this->ui->btnEdit->setFocusProxy(nullptr);
+    this->ui->btnNew->setFocusProxy(nullptr);
+    this->ui->btnDelete->setFocusProxy(nullptr);
+    this->ui->btnCancel->setFocusProxy(nullptr);
+    this->ui->visibleProfileList->setFocusProxy(nullptr);
+    this->ui->btnSave->setFocusProxy(this->ui->visibleProfileList);
+
+    this->fixTabOrder();
+    this->ui->visibleProfileList->setFocus();
 
     connect(this->ui->btnNew, SIGNAL(clicked()), &(this->dialog), SLOT(startNewProfileCreation())); //new button
     connect(this->ui->btnEdit, SIGNAL(clicked()), &(this->dialog), SLOT(startEditOfProfileName())); //edit button
@@ -44,15 +55,6 @@ profileMenu::profileMenu(QWidget *parent)
     connect(&(this->dialog), SIGNAL(createNewProfile(QString)), this, SLOT(handleNewProfileCreation(QString)));
 
     connect(this->ui->visibleProfileList, SIGNAL(itemSelectionChanged()), this, SLOT(handleSelectedProfileChanged()));
-
-    // if(ui->visibleProfileList->selectedItems().count() == 0){
-    //     ui->btnEdit->setDisabled(true);
-    //     ui->btnDelete->setDisabled(true);
-    //     ui->btnSave->setDisabled(true);
-    // }
-    // this->setEditDelSaveDisabled();
-
-    //ToDo logic for "last used profile" should go here
 
     qDebug() << "end: profileMenu cTor";
 }
@@ -281,7 +283,7 @@ void profileMenu::commonCloseActions(){
     qDebug() << "start: common close actions";
     this->constructVisibleListFromInternal();
     this->unsavedActions.clear();
-    this->resetFocusedButton();
+    this->ui->visibleProfileList->setFocus();
     this->close();
 }
 
@@ -379,7 +381,6 @@ void profileMenu::saveButtonPressed(){
         emit this->selProfileHasChanged("", this->currentActiveProfHasBeenDeleted);
     }
     this->currentActiveProfHasBeenDeleted = false; //reset
-    this->resetFocusedButton();
     this->hide();
 }
 
@@ -445,6 +446,7 @@ void profileMenu::setEditDelEnabled(){
         this->ui->btnDelete->setEnabled(true);
         this->editDelAreEnabled = true;
     }
+    this->fixTabOrder();
 }
 
 void profileMenu::setEditDelDisabled(){
@@ -453,6 +455,15 @@ void profileMenu::setEditDelDisabled(){
         this->ui->btnDelete->setDisabled(true);
         this->editDelAreEnabled = false;
     }
+    this->fixTabOrder();
+}
+
+void profileMenu::fixTabOrder(){
+    QWidget::setTabOrder(this->ui->btnEdit, this->ui->btnNew);
+    QWidget::setTabOrder(this->ui->btnNew, this->ui->btnDelete);
+    QWidget::setTabOrder(this->ui->btnDelete, this->ui->visibleProfileList);
+    QWidget::setTabOrder(this->ui->visibleProfileList, this->ui->btnSave);
+    QWidget::setTabOrder(this->ui->btnSave, this->ui->btnCancel);
 }
 
 void profileMenu::handleRejectedSignal(){
@@ -467,13 +478,5 @@ void profileMenu::checkProfilesCountAndSetEditDel(){
         this->setEditDelEnabled();
     }else{
         this->setEditDelDisabled();
-    }
-}
-
-void profileMenu::resetFocusedButton(){
-    if(this->editDelAreEnabled == true){
-        this->ui->btnEdit->setFocus();
-    }else{
-        this->ui->btnNew->setFocus();
     }
 }
