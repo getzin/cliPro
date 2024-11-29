@@ -124,7 +124,9 @@ private:
     QString content;
     QString titleDisplayed;
     QString contentDisplayed;
+    static int constexpr maxTitleLengthGeneral = 200; //at this point a pop up is shown (there is no reason to save this large of a title)
     static int constexpr maxTitleLengthForDisplaying = 50; //after this many letters, the title starts becoming unreadible
+    static int constexpr maxContentLengthGeneral = 100000; //safety value (this already causes minor performance issues)
     static int constexpr maxContentLengthForDisplaying = 1000; //there will be heavy performance issues past a certain size
     static int constexpr maxContentLinesForDisplaying = 20; //same as length
     bool markedForDeletion = false;

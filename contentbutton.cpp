@@ -514,19 +514,23 @@ void contentButton::setTitle(QString newTitle){
     qDebug() << "start: setButtonTitle";
     if(this->title != newTitle){
         if(newTitle.length() > 0){
-            this->title = newTitle;
+            if(newTitle.length() <= this->maxTitleLengthGeneral){
+                this->title = newTitle;
 
-            //we clip very long titles
-            if(this->title.length() < this->maxTitleLengthForDisplaying){
-                this->titleDisplayed = this->title;
+                //we clip very long titles
+                if(this->title.length() < this->maxTitleLengthForDisplaying){
+                    this->titleDisplayed = this->title;
+                }else{
+                    this->titleDisplayed = this->title.first(this->maxTitleLengthForDisplaying).append("...");
+                }
+
+                this->newEditTitleAction.setText(this->textForEditTitleAct);
+                this->removeTitleAction.setVisible(true);
+                if(removeTitleActionSeparator){
+                    this->removeTitleActionSeparator->setVisible(true);
+                }
             }else{
-                this->titleDisplayed = this->title.first(this->maxTitleLengthForDisplaying).append("...");
-            }
-
-            this->newEditTitleAction.setText(this->textForEditTitleAct);
-            this->removeTitleAction.setVisible(true);
-            if(removeTitleActionSeparator){
-                this->removeTitleActionSeparator->setVisible(true);
+                timedPopUp(this, defaultShortPopUpTimer, "Too many characters", "The maximum amount of characters for titles is 200.");
             }
         }else{
             this->title.clear();
@@ -553,15 +557,19 @@ QString contentButton::getContent() const{
 void contentButton::setContent(QString newContent){
     qDebug() << "start: setButtonContent";
     if(newContent.length() > 0){
-        this->content = newContent;
-        this->enableCopyCutRemoveContent();
+        if(newContent.length() <= this->maxContentLengthGeneral){
+            this->content = newContent;
+            this->enableCopyCutRemoveContent();
 
-        //for very long content (many characters or many lines), display "..."
-        if(this->content.count('\n') > this->maxContentLinesForDisplaying
-            || this->content.length() > this->maxContentLengthForDisplaying){
-            this->contentDisplayed = "...";
+            //for very long content (many characters or many lines), display "..."
+            if(this->content.count('\n') > this->maxContentLinesForDisplaying
+                || this->content.length() > this->maxContentLengthForDisplaying){
+                this->contentDisplayed = "...";
+            }else{
+                this->contentDisplayed = this->content;
+            }
         }else{
-            this->contentDisplayed = this->content;
+            timedPopUp(this, defaultShortPopUpTimer, "Too many characters", "The maximum amount of characters for content is 100,000.");
         }
     }else{
         this->removeContent();
