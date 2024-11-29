@@ -1,5 +1,4 @@
 #include "contentbutton.h"
-#include "apputils.h"
 
 #include <QSizePolicy>
 #include <QDebug>
@@ -9,6 +8,8 @@
 #include <QPainter>
 #include <QTextDocument>
 #include <QInputDialog>
+
+#include "apputils.h"
 
 qsizetype contentBtnCount::totalContentBtnCount = 0;
 qsizetype contentBtnCount::markedForDeletionCount = 0;
@@ -22,6 +23,7 @@ QString const contentButton::textForCopyContentAct = "Copy content";
 QString const contentButton::textForPasteContentAct = "Paste content";
 QString const contentButton::textForCutContentAct = "Cut content";
 QString const contentButton::textForRemoveContentAct = "Remove content";
+QString const contentButton::textForMoveButtonAct = "Change position";
 QString const contentButton::textForMarkDeletionAct = "Mark for deletion";
 QString const contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
 QString const contentButton::textForDeleteAllMarkedAct = "Delete ALL marked";
@@ -29,15 +31,16 @@ QString const contentButton::textForDeleteButton = "Delete this button";
 
 contentButton::contentButton(QWidget *parent)
     : QPushButton(parent),
-    newEditTitleAction(this->textForNewTitleAct, this),
-    removeTitleAction(this->textForRemoveTitleAct, this),
-    copyContentAction(this->textForCopyContentAct, this),
-    pasteContentAction(this->textForPasteContentAct, this),
-    cutContentAction(this->textForCutContentAct, this),
-    removeContentAction(this->textForRemoveContentAct, this),
-    markForDeleteAction(this->textForMarkDeletionAct, this),
-    deleteAllMarkedAction(this->textForDeleteAllMarkedAct, this),
-    deleteButtonAction(this->textForDeleteButton, this)
+      newEditTitleAction(this->textForNewTitleAct, this),
+      removeTitleAction(this->textForRemoveTitleAct, this),
+      copyContentAction(this->textForCopyContentAct, this),
+      pasteContentAction(this->textForPasteContentAct, this),
+      cutContentAction(this->textForCutContentAct, this),
+      removeContentAction(this->textForRemoveContentAct, this),
+      moveButtonAction(this->textForMoveButtonAct, this),
+      markForDeleteAction(this->textForMarkDeletionAct, this),
+      deleteAllMarkedAction(this->textForDeleteAllMarkedAct, this),
+      deleteButtonAction(this->textForDeleteButton, this)
 {
     this->setMinimumSize(this->minButtonSize_w, this->minButtonSize_h);
     this->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
@@ -76,11 +79,18 @@ contentButton::contentButton(QWidget *parent)
     this->optionsMenu.addAction(&(this->cutContentAction));
     this->cutContentAction.setVisible(false);
 
-    //delete content
+    //remove content
     this->removeContentActionSeparator = this->optionsMenu.addSeparator();
     this->removeContentActionSeparator->setVisible(false);
     this->optionsMenu.addAction(&(this->removeContentAction));
     this->removeContentAction.setVisible(false);
+
+    //move button (visible by default!)
+    this->moveButtonActionSeparator = this->optionsMenu.addSeparator();
+    // this->moveButtonActionSeparator->setVisible(true);
+    this->optionsMenu.addAction(&(this->moveButtonAction));
+    // this->moveButtonAction.setVisible(true);
+
 
     //mark for deletion
     this->optionsMenu.addSeparator();
@@ -103,6 +113,7 @@ contentButton::contentButton(QWidget *parent)
     connect(&(this->pasteContentAction), SIGNAL(triggered()), this, SLOT(pasteContentFromClipboard()));
     connect(&(this->cutContentAction), SIGNAL(triggered()), this, SLOT(cutContentToClipboard()));
     connect(&(this->removeContentAction), SIGNAL(triggered()), this, SLOT(removeContent()));
+    connect(&(this->moveButtonAction), SIGNAL(triggered()), this, SLOT(emitIndexForMoveButton()));
     connect(&(this->markForDeleteAction), SIGNAL(triggered()), this, SLOT(switchMarkedForDeletion()));
     connect(&(this->deleteAllMarkedAction), SIGNAL(triggered()), this, SLOT(emitDeleteAllSignal()));
     connect(&(this->deleteButtonAction), SIGNAL(triggered()), this, SLOT(deleteThisButton()));
@@ -211,6 +222,10 @@ void contentButton::emitDeleteAllSignal(){
     emit this->deleteAllMarkedButtons();
 }
 
+void contentButton::emitIndexForMoveButton(){
+    emit this->moveButton(this->indexInList);
+}
+
 bool contentButton::isFocused() const{
     return (contentButton::focusedButton == this);
 }
@@ -309,6 +324,9 @@ void contentButton::keyPressEvent(QKeyEvent *event){
                || key == Qt::Key_Escape || key == Qt::Key_Plus
                || key == Qt::Key_P || key == Qt::Key_S){
         emit this->keyWasPressed(key, this->getIndexInList());
+
+    }else if(key == Qt::Key_M){
+        this->emitIndexForMoveButton();
     }else if(key == Qt::Key_Delete){
         Qt::KeyboardModifiers mod = event->modifiers();
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
@@ -461,6 +479,22 @@ void contentButton::disablePasteContent(){
     this->pasteContentAction.setVisible(false);
     if(this->pasteContentActionSeparator){
         this->pasteContentActionSeparator->setVisible(false);
+    }
+}
+
+void contentButton::enableMoveButton(){
+    qDebug() << "start: Enable move button.";
+    this->moveButtonAction.setVisible(true);
+    if(this->moveButtonActionSeparator){
+        this->moveButtonActionSeparator->setVisible(true);
+    }
+}
+
+void contentButton::disableMoveButton(){
+    qDebug() << "start: Disable move button.";
+    this->moveButtonAction.setVisible(false);
+    if(this->moveButtonActionSeparator){
+        this->moveButtonActionSeparator->setVisible(false);
     }
 }
 

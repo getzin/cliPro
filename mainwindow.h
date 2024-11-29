@@ -38,6 +38,8 @@ private slots:
     void createDefaultJsonForNewProfile(QString profileName);
     void processContentButtonKeyPress(int key, qsizetype indexOfSender);
     void startButtonEdit(qsizetype indexOfSender);
+    void openMoveButtonMenu(qsizetype indexOfSender);
+    void moveButtonInList(qsizetype oldIndex, qsizetype newIndex);
     void adjustButtons(dynAddRmButton::btnMode mode);
     void processActionForAddButton();
     void processActionForSearchButton();
@@ -83,8 +85,8 @@ private:
     void processArrowKeyPress(int key, qsizetype indexOfSender);
     void setUpUnmarkAllBtn();
     void adjustMenuOfContentButtons(dynAddRmButton::btnMode mode);
-    void enablePasteForAllButtons();
-    void disablePasteForAllButtons();
+    void enableMoveButtonForAllButtons();
+    void disableMoveButtonForAllButtons();
     void setSearchActive();
     void setSearchInactive();
     void checkSearchMatchForAllButtons(QString searchString);
@@ -92,13 +94,16 @@ private:
     void popUpForProfileSettingsInvalid();
     void updateProfileSettingsValidity();
     bool checkProfileSettingsValidPopUpIfNot();
+    void enablePasteForAllButtons();
+    void disablePasteForAllButtons();
 
     Ui::MainWindow *ui;
     QVector<contentButton*> contentBtnList;
 
     dynAddRmButton dynBtn;
-    profileMenu profMenu;
-    buttonEdit btnEdit;
+    profileMenu profMenu; //changing profile(s)
+    buttonEdit btnEdit; //editing button content & title (if there is one)
+    moveButton moveBtnMenu; //changing button position
 
     QString currSelectedProfileName; //ToDo rethink this variable / maybe move to profMenu and use getter/setter in all places
     QString pathToFileForSelectedProfile; //ToDo rethink this variable / maybe move to profMenu and use getter/setter in all places

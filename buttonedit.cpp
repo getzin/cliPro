@@ -37,9 +37,10 @@ void buttonEdit::editButton(contentButton* btn){
 }
 
 void buttonEdit::save(bool closeAtEnd){
-    qDebug() << "start: handleSave!";
+    qDebug() << "start: save";
     if(this->currentlyEditing == nullptr){
         qDebug() << "currently not editing a button.";
+        this->close();
     }else{
         this->currentlyEditing->setTitle(this->ui->editTitle->toPlainText().remove('\n')); //ToDo Optimize
         this->currentlyEditing->setContent(this->ui->editContent->toPlainText().remove('\n')); //ToDo Optimize

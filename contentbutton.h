@@ -9,6 +9,7 @@
 
 #include "contentbtncount.h"
 #include "dynaddrmbutton.h"
+#include "movebutton.h"
 
 class contentButton : public QPushButton, public contentBtnCount
 {
@@ -42,6 +43,8 @@ public:
     void disableCopyCutRemoveContent();
     void enablePasteContent();
     void disablePasteContent();
+    void enableMoveButton();
+    void disableMoveButton();
     void enableDeleteAllMarked();
     void disableDeleteAllMarked();
 
@@ -61,8 +64,8 @@ signals:
     void keyWasPressed(int key, qsizetype indexOfSender);
     void startContentButtonEdit(qsizetype indexOfSender);
     void deleteAllMarkedButtons();
-
     void saveButtonChangesIntoJSON(); //ToDo for editing content and adding/editing/removing title
+    void moveButton(qsizetype indexOfSender);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -82,6 +85,7 @@ private slots:
     void switchMarkedForDeletion();
     void deleteThisButton();
     void emitDeleteAllSignal();
+    void emitIndexForMoveButton();
 
 private:
     bool isNotMarkedForDeletion() const;
@@ -103,21 +107,25 @@ private:
     void mouseRightClick(QMouseEvent *event);
 
     QMenu optionsMenu; //right-click menu (can be opened via keyboard too)
+
     QAction newEditTitleAction;
     QAction removeTitleAction;
     QAction copyContentAction;
     QAction pasteContentAction;
     QAction cutContentAction;
     QAction removeContentAction;
+    QAction moveButtonAction;
     QAction markForDeleteAction;
     QAction deleteAllMarkedAction;
     QAction deleteButtonAction;
-    QAction* removeTitleActionSeparator; //we enable/disable this separator depending on button state
-    QAction* copyContentActionSeparator; //we enable/disable this separator depending on button content
-    QAction* pasteContentActionSeparator; //we enable/disable this separator depending on clipboard content
-    QAction* cutContentActionSeparator; //we enable/disable this separator depending on button content
-    QAction* removeContentActionSeparator; //we enable/disable this separator depending on button content
-    QAction* deleteAllMarkedActionSeparator; //we enable/disable this separator depening on markedCount (>0 or not)
+
+    QAction* removeTitleActionSeparator; //this separator is enabled/disabled depending on button state
+    QAction* copyContentActionSeparator; //this separator is enabled/disabled depending on button content
+    QAction* pasteContentActionSeparator; //this separator is enabled/disabled depending on clipboard content
+    QAction* cutContentActionSeparator; //this separator is enabled/disabled depending on button content
+    QAction* moveButtonActionSeparator; //this separator is enabled/disabled depending on search active/inactive
+    QAction* removeContentActionSeparator; //this separator is enabled/disabled depending on button content
+    QAction* deleteAllMarkedActionSeparator; //this separator is enabled/disabled depening on markedCount (>0 or not)
 
     qsizetype indexInList = -1;
     QString title;
@@ -144,6 +152,7 @@ private:
     static QString const textForPasteContentAct;
     static QString const textForCutContentAct;
     static QString const textForRemoveContentAct;
+    static QString const textForMoveButtonAct;
     static QString const textForMarkDeletionAct;
     static QString const textForUnmarkDeletionAct;
     static QString const textForDeleteAllMarkedAct;

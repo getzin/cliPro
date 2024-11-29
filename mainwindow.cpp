@@ -14,16 +14,18 @@
 #include <QMimeData>
 
 #include "apputils.h"
+#include "movebutton.h"
 
 const QClipboard *MainWindow::clipboard = nullptr;
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-    , dynBtn(this)
-    , profMenu(this)
-    , btnEdit(this)
-    , unmarkAllBtn(this)
+    : QMainWindow(parent),
+      ui(new Ui::MainWindow),
+      dynBtn(this),
+      profMenu(this),
+      btnEdit(this),
+      moveBtnMenu(this),
+      unmarkAllBtn(this)
 {
     this->ui->setupUi(this);
     this->setWindowTitle(appSettings::appName);
@@ -71,6 +73,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(&(this->profMenu), SIGNAL(selProfileHasChanged(QString,bool)), this, SLOT(updateButtonsForProfileChange(QString,bool)));
     connect(&(this->profMenu), SIGNAL(newProfileCreated(QString)), this, SLOT(createDefaultJsonForNewProfile(QString)));
     connect(&(this->profMenu), SIGNAL(profMenuRejected()), this, SLOT(restoreLastUnfocused()));
+
+    connect(&(this->moveBtnMenu), SIGNAL(updateButtonPosition(qsizetype,qsizetype)), this, SLOT(moveButtonInList(qsizetype,qsizetype)));
 
     connect(this->ui->buttonProfile, SIGNAL(clicked()), this, SLOT(profileButtonClicked()));
     connect(this->ui->buttonAdd, SIGNAL(clicked()), this, SLOT(processActionForAddButton()));
@@ -250,6 +254,9 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
     if(this->clipboard->text().length() > 0){
         newContentBtn->enablePasteContent();
     }
+    if(this->searchActive){
+        newContentBtn->disableMoveButton();
+    }
     qDebug() << "contentButton added -> next: add newContentBtn to scrollGrid";
 
     this->ui->scrollGrid->addWidget(newContentBtn, row, col);
@@ -264,6 +271,7 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
     connect(newContentBtn, SIGNAL(deleteButton(qsizetype)), this, SLOT(processSingleButtonDeletion(qsizetype)));
     connect(newContentBtn, SIGNAL(saveButtonChangesIntoJSON()), this, SLOT(saveCurrentButtonsAsJson()));
     connect(newContentBtn, SIGNAL(deleteAllMarkedButtons()), this, SLOT(processRemoveAllMarkedButtons()));
+    connect(newContentBtn, SIGNAL(moveButton(qsizetype)), this, SLOT(openMoveButtonMenu(qsizetype)));
     qDebug() << "everything has been connected!";
 }
 
@@ -766,6 +774,18 @@ void MainWindow::processActionForAddButton(){
     }
 }
 
+void MainWindow::disableMoveButtonForAllButtons(){
+    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
+        this->contentBtnList.at(i)->disableMoveButton();
+    }
+}
+
+void MainWindow::enablePasteForAllButtons(){
+    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
+        this->contentBtnList.at(i)->enablePasteContent();
+    }
+}
+
 void MainWindow::setSearchActive(){
     if(!this->searchActive){
         this->ui->buttonAdd->setDisabled(true);
@@ -773,6 +793,7 @@ void MainWindow::setSearchActive(){
         this->ui->textInputField->setStyleSheet("color: black; border: 1px solid black; border-radius: 30%; font-weight: bold;"
                                                 "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fff178, stop:1 #fff9ae)");
         this->ui->buttonSearch->setStyleSheet("background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fff178, stop:1 #fff9ae)");
+        this->disableMoveButtonForAllButtons();
         this->searchActive = true;
     }
 }
@@ -785,6 +806,7 @@ void MainWindow::setSearchInactive(){
         this->ui->textInputField->setFocusPolicy(Qt::StrongFocus); //somehow the input field is no longer clickable after search otherwise
         this->ui->textInputField->setStyleSheet("");
         this->ui->buttonSearch->setStyleSheet("");
+        this->enableMoveButtonForAllButtons();
         this->searchActive = false;
         qDebug() << "end of setSearchInactive (search was active before)";
     }
@@ -1113,6 +1135,26 @@ void MainWindow::startButtonEdit(qsizetype indexOfSender){
     qDebug() << "end: startButtonEdit";
 }
 
+void MainWindow::openMoveButtonMenu(qsizetype indexOfSender){
+    qDebug() << "start: openMoveButtonMenu";
+    if(!(this->searchActive)){
+        this->moveBtnMenu.openMenu(indexOfSender, contentButton::getTotalCnt()-1);
+    }else{
+        qDebug() << "Not allowed to open move button menu while search is active";
+    }
+}
+
+void MainWindow::moveButtonInList(qsizetype oldIndex, qsizetype newIndex){
+    qDebug() << "start: moveButtonInList";
+    if(indexIsInBounds(oldIndex, this->contentBtnList.count())
+        && indexIsInBounds(newIndex, this->contentBtnList.count())){
+        contentButton *btn = this->contentBtnList.takeAt(oldIndex);
+        this->contentBtnList.insert(newIndex, btn);
+    }
+    this->updateIndexOfAllButtons();
+    this->rebuildGrid();
+}
+
 void MainWindow::mousePressEvent(QMouseEvent *event){
     Q_UNUSED(event);
     qDebug() << "start: mousePressEvent";
@@ -1171,9 +1213,9 @@ void MainWindow::restoreLastUnfocused(){
     contentButton::restoreLastUnfocusedButtonToFocusedButton();
 }
 
-void MainWindow::enablePasteForAllButtons(){
+void MainWindow::enableMoveButtonForAllButtons(){
     for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-        this->contentBtnList.at(i)->enablePasteContent();
+        this->contentBtnList.at(i)->enableMoveButton();
     }
 }
 

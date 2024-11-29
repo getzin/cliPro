@@ -15,6 +15,7 @@ SOURCES += \
     dynaddrmbutton.cpp \
     main.cpp \
     mainwindow.cpp \
+    movebutton.cpp \
     profilemenu.cpp \
     profilenamedialog.cpp
 
@@ -25,12 +26,14 @@ HEADERS += \
     contentbutton.h \
     dynaddrmbutton.h \
     mainwindow.h \
+    movebutton.h \
     profilemenu.h \
     profilenamedialog.h
 
 FORMS += \
     buttonedit.ui \
     mainwindow.ui \
+    movebutton.ui \
     profilemenu.ui \
     profilenamedialog.ui
 
