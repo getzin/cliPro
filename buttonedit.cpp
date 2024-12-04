@@ -1,24 +1,28 @@
 #include "buttonedit.h"
 #include "ui_buttonedit.h"
 
+buttonEdit::~buttonEdit()
+{
+    delete ui;
+}
+
 buttonEdit::buttonEdit(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::buttonEdit)
 {
+    this->init();
+}
+
+void buttonEdit::init(){
     this->ui->setupUi(this);
-    this->setWindowTitle("Edit text"); //ToDo consider Title? Or maybe buttonEdit should have 2 text inputs (title + text)?
+    this->setWindowTitle("Edit button");
     this->setModal(true);
     connect(this->ui->btnCancel, SIGNAL(clicked()), this, SLOT(close()));
     connect(this->ui->btnSaveOnly, SIGNAL(clicked()), this, SLOT(handleSaveOnly()));
     connect(this->ui->btnSaveAndClose, SIGNAL(clicked()), this, SLOT(handleSaveAndClose()));
 }
 
-buttonEdit::~buttonEdit()
-{
-    delete ui;
-}
-
-void buttonEdit::editButton(contentButton* btn){
+void buttonEdit::editButton(contentButton *const btn){
     if(btn == nullptr){
         qDebug() << "button is NULL.";
     }else{
@@ -36,8 +40,8 @@ void buttonEdit::editButton(contentButton* btn){
     }
 }
 
-void buttonEdit::save(bool closeAtEnd){
-    qDebug() << "start: save";
+//slot
+void buttonEdit::save(bool const closeAtEnd){
     if(this->currentlyEditing == nullptr){
         qDebug() << "currently not editing a button.";
         this->close();
@@ -50,17 +54,14 @@ void buttonEdit::save(bool closeAtEnd){
             this->close();
         }
     }
-    qDebug() << "end: handleSave!";
 }
 
+//slot
 void buttonEdit::handleSaveOnly(){
-    qDebug() << "start: handleSaveOnly!";
     this->save(false);
-    qDebug() << "end: handleSaveOnly!";
 }
 
+//slot
 void buttonEdit::handleSaveAndClose(){
-    qDebug() << "start: handleSaveAndClose!";
     this->save(true);
-    qDebug() << "end: handleSaveAndClose!";
 }

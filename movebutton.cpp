@@ -1,10 +1,19 @@
 #include "movebutton.h"
 #include "ui_movebutton.h"
 
-moveButton::moveButton(QWidget *parent)
+moveButton::~moveButton()
+{
+    delete ui;
+}
+
+moveButton::moveButton(QWidget * const parent)
     : QDialog(parent)
     , ui(new Ui::moveButton)
 {
+    this->init();
+}
+
+void moveButton::init(){
     ui->setupUi(this);
     this->setWindowTitle("Change button position");
     this->setModal(true);
@@ -15,13 +24,7 @@ moveButton::moveButton(QWidget *parent)
     connect(this->ui->valueSlider, SIGNAL(valueChanged(int)), this->ui->valueInput, SLOT(setValue(int)));
 }
 
-moveButton::~moveButton()
-{
-    delete ui;
-}
-
-void moveButton::openMenu(qsizetype index, qsizetype maxIndex){
-    qDebug() << "start: openMenu (moveButton)";
+void moveButton::openMenu(qsizetype const index, qsizetype const maxIndex){
     this->oldIndex = index;
 
     this->ui->valueInput->setMinimum(0);
@@ -38,8 +41,8 @@ void moveButton::openMenu(qsizetype index, qsizetype maxIndex){
     this->show();
 }
 
+//slot
 void moveButton::save(){
-    qDebug() << "start: save (moveButton)";
     qsizetype newIndex = this->ui->valueInput->value();
     if(this->oldIndex != newIndex){
         emit this->updateButtonPosition(this->oldIndex, newIndex);

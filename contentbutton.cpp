@@ -29,9 +29,20 @@ QString const contentButton::textForUnmarkDeletionAct = "Unmark from deletion";
 QString const contentButton::textForDeleteAllMarkedAct = "Delete ALL marked";
 QString const contentButton::textForDeleteButton = "Delete this button";
 
-contentButton::contentButton(QWidget *parent)
+contentButton::~contentButton(){
+    if(this->isMarkedForDeletion()){
+        this->decrMarkedForDelCnt();
+        if(contentButton::getMarkedForDelCnt() == 0){
+            emit this->dynBtnSetMode(dynButton::btnModeADD);
+        }
+    }
+    this->unsetAsFocusedButton(); //called func already includes check on whether this button "is focused" or not
+    this->unsetAsLastUnfocusedButton();
+}
+
+contentButton::contentButton(QWidget *const parent)
     : QPushButton(parent),
-      newEditTitleAction(this->textForNewTitleAct, this),
+      addOrEditTitleAction(this->textForNewTitleAct, this),
       removeTitleAction(this->textForRemoveTitleAct, this),
       copyContentAction(this->textForCopyContentAct, this),
       pasteContentAction(this->textForPasteContentAct, this),
@@ -42,18 +53,24 @@ contentButton::contentButton(QWidget *parent)
       deleteAllMarkedAction(this->textForDeleteAllMarkedAct, this),
       deleteButtonAction(this->textForDeleteButton, this)
 {
+    this->initButtonSettings();
+    this->setUpContextMenu();
+    this->connectAllActions();
+}
+
+void contentButton::initButtonSettings(){
     this->setMinimumSize(this->minButtonSize_w, this->minButtonSize_h);
     this->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
     this->setStyleDefault();
     this->setFocusPolicy(Qt::StrongFocus); //tab+click focus
     this->setAttribute(Qt::WA_MacShowFocusRect);
-
     //-1 here as the number is already increased upon creation (see ctor of contentbtncount.h)
     this->setIndexInList(contentBtnCount::getTotalCnt() - 1);
+}
 
-    //---MENU---
+void contentButton::setUpContextMenu(){
     //add/edit title
-    this->optionsMenu.addAction(&(this->newEditTitleAction));
+    this->optionsMenu.addAction(&(this->addOrEditTitleAction));
 
     //remove title
     this->removeTitleActionSeparator = this->optionsMenu.addSeparator();
@@ -87,10 +104,7 @@ contentButton::contentButton(QWidget *parent)
 
     //move button (visible by default!)
     this->moveButtonActionSeparator = this->optionsMenu.addSeparator();
-    // this->moveButtonActionSeparator->setVisible(true);
     this->optionsMenu.addAction(&(this->moveButtonAction));
-    // this->moveButtonAction.setVisible(true);
-
 
     //mark for deletion
     this->optionsMenu.addSeparator();
@@ -105,9 +119,10 @@ contentButton::contentButton(QWidget *parent)
     //delete this button
     this->optionsMenu.addSeparator();
     this->optionsMenu.addAction(&(this->deleteButtonAction));
+}
 
-    //---qt connects---
-    connect(&(this->newEditTitleAction), SIGNAL(triggered()), this, SLOT(titleAdjust()));
+void contentButton::connectAllActions(){
+    connect(&(this->addOrEditTitleAction), SIGNAL(triggered()), this, SLOT(titleAdjust()));
     connect(&(this->removeTitleAction), SIGNAL(triggered()), this, SLOT(removeTitle()));
     connect(&(this->copyContentAction), SIGNAL(triggered()), this, SLOT(copyContentToClipboard()));
     connect(&(this->pasteContentAction), SIGNAL(triggered()), this, SLOT(pasteContentFromClipboard()));
@@ -119,25 +134,12 @@ contentButton::contentButton(QWidget *parent)
     connect(&(this->deleteButtonAction), SIGNAL(triggered()), this, SLOT(deleteThisButton()));
 }
 
-contentButton::~contentButton(){
-    if(this->isMarkedForDeletion()){
-        this->decrMarkedForDelCnt();
-        if(contentButton::getMarkedForDelCnt() == 0){
-            emit this->dynBtnSetMode(dynAddRmButton::btnModeADD);
-        }
-    }
-    this->unsetAsFocusedButton(); //called func already includes check on whether this button "is focused" or not
-    this->unsetAsLastUnfocusedButton();
-}
-
 void contentButton::setStyleDefault(){
-    qDebug() << "style (default)";
     this->setStyleSheet("contentButton { color: black; border: 1px solid silver; border-radius: 10%; "
                             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F0F0, stop:1 #eaeaea) }");
 }
 
 void contentButton::setStyleFocused(){
-    qDebug() << "style (focus)";
     this->setStyleSheet("contentButton { color: black; border: 1px solid grey; border-radius: 10%;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #fbfbd5, stop:1 #fdfde2) }"
                         "contentButton:focus { color: black; border: 2px solid grey; border-radius: 10%; outline: none;"
@@ -145,13 +147,11 @@ void contentButton::setStyleFocused(){
 }
 
 void contentButton::setStyleMarkedForDeletion(){
-    qDebug() << "style (marked)";
     this->setStyleSheet("contentButton { color: black; border: 1px solid lightcoral; border-radius: 10%;"
                             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffe8e3, stop:1 #fad4cd) }");
 }
 
 void contentButton::setStyleMarkedForDelAndFocus(){
-    qDebug() << "style (marked & focus)";
     this->setStyleSheet("contentButton { color: black; border: 1px solid lightcoral; border-radius: 10%;"
                             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffe8e3, stop:1 #fad4cd) }"
                             "contentButton:focus { color: black; border: 2px solid lightcoral; border-radius: 10%; outline: none;"
@@ -192,6 +192,7 @@ void contentButton::unsetMarkedForDeletion(){
     }
 }
 
+//slot
 void contentButton::switchMarkedForDeletion(){
     if(this->markedForDeletion){
         this->unsetMarkedForDeletion();
@@ -210,18 +211,18 @@ void contentButton::checkForDynBtnSwitch(){
          *           --> switch state of dynFuncBtn to RM */
     qsizetype markedForDelCount = contentButton::getMarkedForDelCnt();
     if(markedForDelCount == 0 && this->isNotMarkedForDeletion()){
-        qDebug() << "emit set mode to add.";
-        emit this->dynBtnSetMode(dynAddRmButton::btnModeADD);
+        emit this->dynBtnSetMode(dynButton::btnModeADD);
     }else if(markedForDelCount == 1 && this->isMarkedForDeletion()){
-        qDebug() << "emit set mode to rm";
-        emit this->dynBtnSetMode(dynAddRmButton::btnModeRM);
+        emit this->dynBtnSetMode(dynButton::btnModeRM);
     }
 }
 
+//slot
 void contentButton::emitDeleteAllSignal(){
     emit this->deleteAllMarkedButtons();
 }
 
+//slot
 void contentButton::emitIndexForMoveButton(){
     emit this->moveButton(this->indexInList);
 }
@@ -231,9 +232,7 @@ bool contentButton::isFocused() const{
 }
 
 void contentButton::setAsFocusedButton(){
-    qDebug() << "start: setAsFocusedButton (this->id: " << this->indexInList;
     if(this->isNotFocused()){
-        qDebug() << "was not focused";
         this->setFocus();
         if(this->isMarkedForDeletion()){
             this->setStyleMarkedForDelAndFocus();
@@ -242,7 +241,6 @@ void contentButton::setAsFocusedButton(){
         }
         contentButton::focusedButton = this;
     }
-    qDebug() << "end: setAsFocusedButton";
 }
 
 void contentButton::unsetAsFocusedButton(){
@@ -265,7 +263,6 @@ void contentButton::unsetAsLastUnfocusedButton(){
 }
 
 void contentButton::gainFocus(){
-    qDebug() << "start: gainFocus";
     contentButton::clearFocusedButton();
     this->setAsFocusedButton();
 }
@@ -298,9 +295,8 @@ void contentButton::clearLastUnfocusedButton(){
     contentButton::lastUnfocusedButton = nullptr;
 }
 
-void contentButton::keyPressEvent(QKeyEvent *event){
-    qDebug() << "start: Key press event! (contentButton)";
-
+void contentButton::keyPressEvent(QKeyEvent * const event){
+    qDebug() << "start: keyPressEvent (contentButton)";
     int key = event->key();
     if(key == Qt::Key_Return || key == Qt::Key_Enter){
         qDebug() << "Enter pressed.";
@@ -343,12 +339,11 @@ void contentButton::keyPressEvent(QKeyEvent *event){
             emit this->keyWasPressed(key, this->getIndexInList());
         }
     }
-    qDebug() << "end: Key press event! (contentButton)";
+    qDebug() << "end: keyPressEvent (contentButton)";
 }
 
+//slot
 void contentButton::titleAdjust(){
-    qDebug() << "start: titleAdjust";
-
     QString userInput;
     bool pressedOK;
     if(this->hasTitle()){
@@ -358,22 +353,21 @@ void contentButton::titleAdjust(){
     }
 
     if(pressedOK){
-        qDebug() << "Input OK";
         this->setTitle(userInput);
         this->saveJSON(); //ToDo optimize
     }
-
-    qDebug() << "end: titleAdjust";
 }
 
+//slot
 void contentButton::copyContentToClipboard(){
     if(this->content.length() > 0){
         QGuiApplication::clipboard()->setText(this->content);
     }else{
-        timedPopUp(this, defaultVeryShortPopUpTimer, "No content", "Button content is empty.<br>Will not copy to clipboard.");
+        timedPopUp(this, defaultQuickPopUpTimer, "No content", "Button content is empty.<br>Will not copy to clipboard.");
     }
 }
 
+//slot
 void contentButton::pasteContentFromClipboard(){
     bool save = true;
     QString clipboardText = QGuiApplication::clipboard()->text();
@@ -396,10 +390,10 @@ void contentButton::pasteContentFromClipboard(){
         }
     }else{
         if(this->getContent().length() > 0){
-            timedPopUp(this, defaultShortPopUpTimer, "Invalid clipboard data", "Clipboard does not have valid text data."
+            timedPopUp(this, defaultPopUpTimer, "Invalid clipboard data", "Clipboard does not have valid text data."
                                                                                "<br>Button content won't be overwritten.");
         }else{
-            timedPopUp(this, defaultVeryShortPopUpTimer, "Invalid clipboard data", "Clipboard does not have valid text data.");
+            timedPopUp(this, defaultQuickPopUpTimer, "Invalid clipboard data", "Clipboard does not have valid text data.");
         }
     }
 }
@@ -410,20 +404,22 @@ void contentButton::clearContent(){
     this->disableCopyCutRemoveContent();
 }
 
+//slot
 void contentButton::cutContentToClipboard(){
     if(this->content.length() > 0){
         QGuiApplication::clipboard()->setText(this->content);
         this->clearContent();
     }else{
-        timedPopUp(this, defaultVeryShortPopUpTimer, "No content", "Button content is empty.<br>Will not cut to clipboard.");
+        timedPopUp(this, defaultQuickPopUpTimer, "No content", "Button content is empty.<br>Will not cut to clipboard.");
     }
 }
 
+//slot
 void contentButton::removeContent(){
     if(this->content.length() > 0){
         QMessageBox::StandardButton reply;
         reply = QMessageBox::question(this, "Remove content confirmation",
-                                      "Do you really want to remove the content of this button?"
+                                      "Do you really want to remove <b>the content</b> of this button?"
                                       "<br><br><i><b><u>WARNING:</u></b> This action is <b>irreversible!</b></i>",
                                       QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
         if(reply == QMessageBox::Yes){
@@ -435,7 +431,6 @@ void contentButton::removeContent(){
 }
 
 void contentButton::enableCopyCutRemoveContent(){
-    qDebug() << "start: Enable text copying, cutting and deletion.";
     this->copyContentAction.setVisible(true);
     if(this->copyContentActionSeparator){
         this->copyContentActionSeparator->setVisible(true);
@@ -451,7 +446,6 @@ void contentButton::enableCopyCutRemoveContent(){
 }
 
 void contentButton::disableCopyCutRemoveContent(){
-    qDebug() << "start: Disable text copying, cutting and deletion.";
     this->copyContentAction.setVisible(false);
     if(this->copyContentActionSeparator){
         this->copyContentActionSeparator->setVisible(false);
@@ -467,7 +461,6 @@ void contentButton::disableCopyCutRemoveContent(){
 }
 
 void contentButton::enablePasteContent(){
-    qDebug() << "start: Enable text pasting.";
     this->pasteContentAction.setVisible(true);
     if(this->pasteContentActionSeparator){
         this->pasteContentActionSeparator->setVisible(true);
@@ -475,7 +468,6 @@ void contentButton::enablePasteContent(){
 }
 
 void contentButton::disablePasteContent(){
-    qDebug() << "start: Disable text pasting.";
     this->pasteContentAction.setVisible(false);
     if(this->pasteContentActionSeparator){
         this->pasteContentActionSeparator->setVisible(false);
@@ -483,7 +475,6 @@ void contentButton::disablePasteContent(){
 }
 
 void contentButton::enableMoveButton(){
-    qDebug() << "start: Enable move button.";
     this->moveButtonAction.setVisible(true);
     if(this->moveButtonActionSeparator){
         this->moveButtonActionSeparator->setVisible(true);
@@ -491,7 +482,6 @@ void contentButton::enableMoveButton(){
 }
 
 void contentButton::disableMoveButton(){
-    qDebug() << "start: Disable move button.";
     this->moveButtonAction.setVisible(false);
     if(this->moveButtonActionSeparator){
         this->moveButtonActionSeparator->setVisible(false);
@@ -499,7 +489,6 @@ void contentButton::disableMoveButton(){
 }
 
 void contentButton::enableDeleteAllMarked(){
-    qDebug() << "start: Enable delete all marked.";
     this->deleteAllMarkedAction.setVisible(true);
     if(this->deleteAllMarkedActionSeparator){
         this->deleteAllMarkedActionSeparator->setVisible(true);
@@ -507,28 +496,28 @@ void contentButton::enableDeleteAllMarked(){
 }
 
 void contentButton::disableDeleteAllMarked(){
-    qDebug() << "start: Disable delete all marked.";
     this->deleteAllMarkedAction.setVisible(false);
     if(this->deleteAllMarkedActionSeparator){
         this->deleteAllMarkedActionSeparator->setVisible(false);
     }
 }
 
+//slot
 void contentButton::removeTitle(){
     this->setTitle("");
     this->saveJSON(); //ToDo optimize
 }
 
+//slot
 void contentButton::deleteThisButton(){
     emit this->deleteButton(this->getIndexInList());
 }
 
-void contentButton::openOptionsMenu(QPoint p){
-    qDebug() << "start: openOptionsMenu (x: " << p.x() << ", y: " << p.y() << ")";
-    optionsMenu.popup(p);
+void contentButton::openOptionsMenu(QPoint const &p){
+    this->optionsMenu.popup(p);
 }
 
-void contentButton::setIndexInList(qsizetype index){
+void contentButton::setIndexInList(qsizetype const index){
     this->indexInList = index;
 };
 
@@ -544,8 +533,7 @@ QString contentButton::getTitle() const{
     return this->title;
 }
 
-void contentButton::setTitle(QString newTitle){
-    qDebug() << "start: setButtonTitle";
+void contentButton::setTitle(QString const &newTitle){
     if(this->title != newTitle){
         if(newTitle.length() > 0){
             if(newTitle.length() <= this->maxTitleLengthGeneral){
@@ -558,17 +546,17 @@ void contentButton::setTitle(QString newTitle){
                     this->titleDisplayed = this->title.first(this->maxTitleLengthForDisplaying).append("...");
                 }
 
-                this->newEditTitleAction.setText(this->textForEditTitleAct);
+                this->addOrEditTitleAction.setText(this->textForEditTitleAct);
                 this->removeTitleAction.setVisible(true);
                 if(removeTitleActionSeparator){
                     this->removeTitleActionSeparator->setVisible(true);
                 }
             }else{
-                timedPopUp(this, defaultShortPopUpTimer, "Too many characters", "The maximum amount of characters for titles is 200.");
+                timedPopUp(this, defaultPopUpTimer, "Too many characters", "The maximum amount of characters for titles is 200.");
             }
         }else{
             this->title.clear();
-            this->newEditTitleAction.setText(this->textForNewTitleAct);
+            this->addOrEditTitleAction.setText(this->textForNewTitleAct);
             this->removeTitleAction.setVisible(false);
             if(removeTitleActionSeparator){
                 this->removeTitleActionSeparator->setVisible(false);
@@ -577,7 +565,6 @@ void contentButton::setTitle(QString newTitle){
     }else{
         qDebug() << "Title has not changed.";
     }
-    qDebug() << "end: setButtonTitle";
 }
 
 bool contentButton::hasTitle() const{
@@ -588,8 +575,7 @@ QString contentButton::getContent() const{
     return this->content;
 }
 
-void contentButton::setContent(QString newContent){
-    qDebug() << "start: setButtonContent";
+void contentButton::setContent(QString const &newContent){
     if(newContent.length() > 0){
         if(newContent.length() <= this->maxContentLengthGeneral){
             this->content = newContent;
@@ -603,20 +589,19 @@ void contentButton::setContent(QString newContent){
                 this->contentDisplayed = this->content;
             }
         }else{
-            timedPopUp(this, defaultShortPopUpTimer, "Too many characters", "The maximum amount of characters for content is 100,000.");
+            timedPopUp(this, defaultPopUpTimer, "Too many characters", "The maximum amount of characters for content is 100,000.");
         }
     }else{
         this->removeContent();
     }
-    qDebug() << "end: setButtonContent";
 }
 
-void contentButton::checkIfSearchIsMatched(QString searchString){
+void contentButton::checkIfSearchIsMatched(QString const &searchString){
     if(this->title.contains(searchString)){
-        qDebug() << "Title: " << this->title << " --- contains search string: " << searchString;
+        // qDebug() << "Title contains search string: " << searchString;
         this->buttonMatchesSearch = searchStatusMatched;
     }else if(this->content.contains(searchString)){
-        qDebug() << "Content: <" << this->content << " --- contains search string: " << searchString;
+        // qDebug() << "Content contains search string: " << searchString;
         this->buttonMatchesSearch = searchStatusMatched;
     }else{
         this->buttonMatchesSearch = searchStatusNoMatch;
@@ -627,25 +612,21 @@ void contentButton::resetSearchStatus(){
     this->buttonMatchesSearch = searchStatusDefault;
 }
 
-contentButton::searchStatus contentButton::getSearchStatus(){
+contentButton::searchStatus contentButton::getSearchStatus() const{
     return this->buttonMatchesSearch;
 }
 
 void contentButton::mouseLeftClick(){
-    qDebug() << "Left Button on a contentButton!";
     QFocusEvent* focus = new QFocusEvent(QEvent::MouseButtonPress, Qt::MouseFocusReason);
     this->focusInEvent(focus);
     delete focus;
 }
 
-void contentButton::mouseRightClick(QMouseEvent *event){
-    qDebug() << "start: mouseRightClick";
+void contentButton::mouseRightClick(QMouseEvent const * const event){
     this->openOptionsMenu(event->globalPosition().toPoint());
-    qDebug() << "end: mouseRightClick";
 }
 
-void contentButton::mousePressEvent(QMouseEvent *event){
-    qDebug() << "start: mousePressEvent";
+void contentButton::mousePressEvent(QMouseEvent * const event){
     Qt::KeyboardModifiers mod = event->modifiers();
     if(mod == Qt::CTRL || mod == Qt::SHIFT){
         this->switchMarkedForDeletion();
@@ -656,12 +637,9 @@ void contentButton::mousePressEvent(QMouseEvent *event){
             this->mouseLeftClick();
         }
     }
-    qDebug() << "end: mousePressEvent";
 }
 
-void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
-    //https://www.youtube.com/watch?v=Yg1FBrbfwNM
-    qDebug() << "Double click!";
+void contentButton::mouseDoubleClickEvent(QMouseEvent *const event){
     Qt::KeyboardModifiers mod = event->modifiers();
     if(mod == Qt::CTRL || mod == Qt::SHIFT){
         this->switchMarkedForDeletion();
@@ -674,37 +652,27 @@ void contentButton::mouseDoubleClickEvent(QMouseEvent *event){
     }
 }
 
-void contentButton::focusInEvent(QFocusEvent *event){
-
-    qDebug() << "focusInEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
-    qDebug() << "focusInEvent ; index: " << this->getIndexInList();
-
+void contentButton::focusInEvent(QFocusEvent * const event){
     QWidget::focusInEvent(event);
-    qDebug() << "Reason: " << event->reason();
-
     Qt::FocusReason r = event->reason();
+    // qDebug() << "focusInEvent ; index: " << this->getIndexInList() << " ; reason: " << r;
     if(r == Qt::MouseFocusReason || r == Qt::TabFocusReason
         || r == Qt::BacktabFocusReason || r == Qt::OtherFocusReason){
         this->setAsFocusedButton();
     }
 }
 
-void contentButton::focusOutEvent(QFocusEvent *event){
-
-    qDebug() << "focusOutEvent ---- this->getMarkedForDelCnt(): " << this->getMarkedForDelCnt();
-    qDebug() << "focusOutEvent ; index: " << this->getIndexInList();
-
+void contentButton::focusOutEvent(QFocusEvent * const event){
     QWidget::focusOutEvent(event);
-    qDebug() << "Reason: " << event->reason();
-
     Qt::FocusReason r = event->reason();
+    // qDebug() << "focusOutEvent ; index: " << this->getIndexInList() << " ; reason: " << r;
     if(r == Qt::MouseFocusReason || r == Qt::TabFocusReason
         || r == Qt::BacktabFocusReason || r == Qt::OtherFocusReason){
         this->unsetAsFocusedButton();
     }
 }
 
-void contentButton::paintEvent(QPaintEvent *event){
+void contentButton::paintEvent(QPaintEvent * const event){
 
     QPushButton::paintEvent(event);
 
@@ -745,11 +713,12 @@ void contentButton::paintEvent(QPaintEvent *event){
     QPixmap croppedPixmapTitle = scaledPixmapTitle.copy(pixmapTitle.rect());
     combinedImage.drawPixmap(rectTitle,croppedPixmapTitle);
 
-    //--------------------/TITLE---------------------
-    //--------------------CONTENT--------------------
+    //----------------END: TITLE---------------------
+    //---------------            --------------------
+    //--------------START: CONTENT-------------------
 
     QPoint pointContent(0, dividingHeight);
-    QSize sizeContent(this->width() - 1, remainingHeight); //ToDo check the "-1" of height
+    QSize sizeContent(this->width() - 1, remainingHeight); //ToDo check the "-1" of width
 
     QTextDocument docContent(this->contentDisplayed);
     docContent.setDefaultFont(QFont("Times", 12, QFont::Medium));

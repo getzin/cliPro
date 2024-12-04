@@ -1,8 +1,9 @@
 #ifndef PROFILEMENU_H
 #define PROFILEMENU_H
 
-#include "profilenamedialog.h"
 #include <QDialog>
+
+#include "profilenamedialog.h"
 
 namespace Ui {
 class profileMenu;
@@ -13,18 +14,19 @@ class profileMenu : public QDialog
     Q_OBJECT
 
 public:
-    explicit profileMenu(QWidget *parent = nullptr);
     ~profileMenu();
-    qsizetype getProfilesCount();
+    explicit profileMenu(QWidget *const parent = nullptr);
+    profileMenu(const profileMenu&) = delete;
+    profileMenu& operator=(const profileMenu&) = delete;
+    qsizetype getProfilesCount() const;
     QString getCurrSelProfileName() const;
-    bool checkIfProfileIsInList(QString nameToCheck);
+    bool checkProfileNameIsInInternalList(QString const &nameToCheck) const;
     static void createProfilesFolderIfNotExist();
-    static QString constructFilePathForProfileJson(QString profileName);
-    static QString const profilesFolderName;
+    static QString constructFilePathForProfileJson(QString const &profileName);
 
 signals:
-    void selProfileHasChanged(QString newProfileName, bool);
-    void newProfileCreated(QString newProfileName);
+    void selProfileHasChanged(QString const &newProfileName, bool const currentProfileWasDeleted);
+    void newProfileCreated(QString const &newProfileName);
     void profMenuRejected();
 
 protected:
@@ -32,13 +34,13 @@ protected:
     void saveProfiles();
 
 private slots:
-    void handleNewProfileCreation(QString newName);
-    void handleProfileNameEdited(QString oldName, QString newName);
+    void handleNewProfileCreation(QString const &newName);
+    void handleProfileNameEdited(QString const &oldName, QString const &newName);
     void deleteButtonPressed();
     void cancelButtonPressed();
+    void handleRejectedSignal();
     void saveButtonPressed();
     void handleSelectedProfileChanged();
-    void handleRejectedSignal();
 
 private:
     //we derive the action from the states of delName & newName
@@ -51,21 +53,25 @@ private:
     };
     QList<profAction> unsavedActions;
     Ui::profileMenu *ui;
-    profileNameDialog dialog;
-    qsizetype currentActiveProfile = -1; //-1 means "none selected/invalid" //ToDo ... "selected/invalid/deleted"
+    profileNameDialog nameDialog;
+    qsizetype currentActiveProfile = -1; //-1 means "none selected/invalid"
     qsizetype savedIDOffset = 0; //comes into play when deleting items with lower index than the currentActiveProfile,
                                  //value "grows" but will only ever subtracted from currentActiveProfile
     bool currentActiveProfHasBeenDeleted = false;
     bool editDelAreEnabled = true;
+    static QString const profilesFolderName;
     QStringList internalProfilesList;
+
+    void initProfMenu();
+    void initConnects();
 
     void constructVisibleListFromInternal();
     void saveVisibleListToInternal();
     void processProfilesActions();
     void commonCloseActions();
-    void renameProfilesJson(QString oldName, QString newName);
-    void createNewProfilesJson(QString name);
-    void deleteProfilesJson(QString name);
+    void renameProfilesJson(QString const &oldName, QString const &newName);
+    void createNewProfilesJson(QString const &name);
+    void deleteProfilesJson(QString const &name);
 
     void setEditDelEnabled();
     void setEditDelDisabled();

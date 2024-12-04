@@ -20,10 +20,10 @@ inline QString const settingsValProfilesList = "profiles_list";
 inline QString const settingsValCurrProfileID = "current_profile_id";
 }
 
-int constexpr defaultVeryShortPopUpTimer = 2000; //ms
-int constexpr defaultShortPopUpTimer = 3000; //ms
-int constexpr defaultLongPopUpTimer = 8000; //ms
-void timedPopUp(QWidget *parent, int timer_ms, QString windowTitle, QString message);
-bool indexIsInBounds(qsizetype index, qsizetype upperBound);
+static int constexpr defaultQuickPopUpTimer = 2000; //ms
+static int constexpr defaultPopUpTimer = 3000; //ms
+static int constexpr defaultLongPopUpTimer = 8000; //ms
+void timedPopUp(QWidget *const parent = nullptr, int const timer_ms = defaultPopUpTimer, QString const &windowTitle = "", QString const &message = "");
+bool indexIsInBounds(qsizetype const index, qsizetype const upperBound);
 
 #endif // APPUTILS_H

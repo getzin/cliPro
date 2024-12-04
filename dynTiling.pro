@@ -12,7 +12,7 @@ SOURCES += \
     apputils.cpp \
     buttonedit.cpp \
     contentbutton.cpp \
-    dynaddrmbutton.cpp \
+    dynbutton.cpp \
     main.cpp \
     mainwindow.cpp \
     movebutton.cpp \
@@ -24,7 +24,7 @@ HEADERS += \
     buttonedit.h \
     contentbtncount.h \
     contentbutton.h \
-    dynaddrmbutton.h \
+    dynbutton.h \
     mainwindow.h \
     movebutton.h \
     profilemenu.h \

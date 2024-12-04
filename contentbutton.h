@@ -8,7 +8,7 @@
 #include <QAction>
 
 #include "contentbtncount.h"
-#include "dynaddrmbutton.h"
+#include "dynbutton.h"
 
 class contentButton : public QPushButton, public contentBtnCount
 {
@@ -20,12 +20,13 @@ public:
         searchStatusNoMatch = 0,
         searchStatusMatched = 1,
     };
-    explicit contentButton(QWidget *parent);
     ~contentButton();
+    explicit contentButton(QWidget *const parent = nullptr);
+    contentButton(const contentButton&) = delete;
+    contentButton& operator=(const contentButton&) = delete;
 
     bool isMarkedForDeletion() const;
     void unsetMarkedForDeletion();
-
     bool isFocused() const;
     void gainFocus();
     void unsetAsFocusedButton();
@@ -35,7 +36,7 @@ public:
     static void restoreLastUnfocusedButtonToFocusedButton();
     static void clearLastUnfocusedButton();
 
-    void setIndexInList(qsizetype index);
+    void setIndexInList(qsizetype const index);
     qsizetype getIndexInList() const;
 
     void enableCopyCutRemoveContent();
@@ -49,30 +50,30 @@ public:
 
     void saveJSON();
     QString getTitle() const;
-    void setTitle(QString newTitle);
+    void setTitle(QString const &newTitle);
     bool hasTitle() const;
     QString getContent() const;
-    void setContent(QString newContent);
-    void checkIfSearchIsMatched(QString searchString);
+    void setContent(QString const &newContent);
+    void checkIfSearchIsMatched(QString const &searchString);
     void resetSearchStatus();
-    searchStatus getSearchStatus();
+    searchStatus getSearchStatus() const;
 
 signals:
-    void dynBtnSetMode(dynAddRmButton::btnMode);
-    void deleteButton(qsizetype indexOfSender);
-    void keyWasPressed(int key, qsizetype indexOfSender);
-    void startContentButtonEdit(qsizetype indexOfSender);
+    void dynBtnSetMode(dynButton::btnMode const mode);
+    void deleteButton(qsizetype const indexOfSender);
+    void keyWasPressed(int const key, qsizetype const indexOfSender);
+    void startContentButtonEdit(qsizetype const indexOfSender);
     void deleteAllMarkedButtons();
     void saveButtonChangesIntoJSON(); //ToDo for editing content and adding/editing/removing title
-    void moveButton(qsizetype indexOfSender);
+    void moveButton(qsizetype const indexOfSender);
 
 protected:
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
-    void focusOutEvent(QFocusEvent *event) override;
-    void focusInEvent(QFocusEvent *event) override;
-    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *const event) override;
+    void mouseDoubleClickEvent(QMouseEvent *const event) override;
+    void keyPressEvent(QKeyEvent *const event) override;
+    void focusOutEvent(QFocusEvent *const event) override;
+    void focusInEvent(QFocusEvent *const event) override;
+    void paintEvent(QPaintEvent *const event) override;
 
 private slots:
     void titleAdjust();
@@ -87,6 +88,10 @@ private slots:
     void emitIndexForMoveButton();
 
 private:
+    void initButtonSettings();
+    void setUpContextMenu();
+    void connectAllActions();
+
     bool isNotMarkedForDeletion() const;
     void setMarkedForDeletion();
 
@@ -101,13 +106,13 @@ private:
     void checkForDynBtnSwitch();
     void clearContent();
 
-    void openOptionsMenu(QPoint p);
+    void openOptionsMenu(QPoint const &p);
     void mouseLeftClick();
-    void mouseRightClick(QMouseEvent *event);
+    void mouseRightClick(QMouseEvent const * const event);
 
     QMenu optionsMenu; //right-click menu (can be opened via keyboard too)
 
-    QAction newEditTitleAction;
+    QAction addOrEditTitleAction;
     QAction removeTitleAction;
     QAction copyContentAction;
     QAction pasteContentAction;

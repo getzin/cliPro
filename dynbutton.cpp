@@ -1,11 +1,20 @@
-#include "dynaddrmbutton.h"
+#include "dynbutton.h"
 
 #include <QKeyEvent>
 
-dynAddRmButton::dynAddRmButton(QWidget *parent)
+dynButton::~dynButton() {
+    ; //nothing, we have no allocations/pointers to memory
+    qDebug() << "~dynButton --- dtor";
+}
+
+dynButton::dynButton(QWidget * const parent)
     : QPushButton(parent)
 {
-    qDebug() << "dynAddRmButton --- ctor";
+    qDebug() << "dynButton --- ctor";
+    this->init();
+}
+
+void dynButton::init(){
     // QFont font(QString("Noto Sans"), 30, 5, false);
     QFont font("Monospace");
     font.setStyleHint(QFont::TypeWriter, QFont::PreferBitmap);
@@ -18,38 +27,29 @@ dynAddRmButton::dynAddRmButton(QWidget *parent)
     this->setMode(btnModeDISABLED);
 }
 
-dynAddRmButton::~dynAddRmButton() {
-    ; //nothing, we have no allocations/pointers to memory
-    qDebug() << "~dynAddRmButton --- dtor";
-}
-
-void dynAddRmButton::setStyleSheetAdd(){
-    qDebug() << "start: setStyleSheetAdd";
-
-    this->setStyleSheet("dynAddRmButton { color: green; border: 1px solid green; border-radius: 10%;"
+void dynButton::setStyleSheetAdd(){
+    this->setStyleSheet("dynButton { color: green; border: 1px solid green; border-radius: 10%;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ecf5eb, stop:1 #e0f5df) }"
-                        "dynAddRmButton:focus { color: green; border: 2px solid green; border-radius: 10%; outline: none;"
+                        "dynButton:focus { color: green; border: 2px solid green; border-radius: 10%; outline: none;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #dee9dd, stop:1 #d0e4cf) }");
 }
 
-void dynAddRmButton::setStyleSheetRm(){
-    qDebug() << "start: setStyleSheetRm";
-    this->setStyleSheet("dynAddRmButton { color: darkred; border: 1px solid red; border-radius: 10%;"
+void dynButton::setStyleSheetRm(){
+    this->setStyleSheet("dynButton { color: darkred; border: 1px solid red; border-radius: 10%;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffb9a9, stop:1 #ff9d88) }"
-                        "dynAddRmButton:focus { color: darkred; border: 2px solid red; border-radius: 10%; outline: none;"
+                        "dynButton:focus { color: darkred; border: 2px solid red; border-radius: 10%; outline: none;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffa490, stop:1 #ff8166) }");
 }
 
-void dynAddRmButton::setStyleSheetDisabled(){
-    qDebug() << "start: setStyleSheetDisabled";
-    this->setStyleSheet("dynAddRmButton { color: black; border: 1px solid darkgray; border-radius: 10%;"
+void dynButton::setStyleSheetDisabled(){
+    this->setStyleSheet("dynButton { color: black; border: 1px solid darkgray; border-radius: 10%;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #e2e2e2, stop:1 #cbcbcb) }"
-                        "dynAddRmButton:focus { color: black; border: 2px solid darkgray; border-radius: 10%; outline: none;"
+                        "dynButton:focus { color: black; border: 2px solid darkgray; border-radius: 10%; outline: none;"
                         "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #e2e2e2, stop:1 #cbcbcb) }");
 }
 
-
-void dynAddRmButton::setMode(dynAddRmButton::btnMode mode){
+//slot
+void dynButton::setMode(btnMode const mode){
     qDebug() << "start: setMode (mode: " << mode << ")";
     if(mode == btnModeADD){
         this->setText("+");
@@ -66,17 +66,13 @@ void dynAddRmButton::setMode(dynAddRmButton::btnMode mode){
     }else{
         qDebug() << "invalid mode.";
     }
-    qDebug() << "emit: mainWindowButtonsNeedSwitch";
     emit this->mainWindowButtonsNeedSwitch(this->currBtnMode);
-    qDebug() << "end: setMode";
 }
 
-dynAddRmButton::btnMode dynAddRmButton::getCurrBtnMode() const{
+dynButton::btnMode dynButton::getCurrBtnMode() const{
     return this->currBtnMode;
 }
 
-void dynAddRmButton::keyPressEvent(QKeyEvent *event){
-    qDebug() << "start: Key press event! (dynAddRmButton)";
+void dynButton::keyPressEvent(QKeyEvent *const event){
     emit this->keyPressOnDynBtn(event->key());
-    qDebug() << "end: Key press event! (dynAddRmButton)";
 }

@@ -11,13 +11,21 @@
 
 QString const profileMenu::profilesFolderName = "/profiles/";
 
-profileMenu::profileMenu(QWidget *parent)
+profileMenu::~profileMenu()
+{
+    delete this->ui;
+}
+
+profileMenu::profileMenu(QWidget * const parent)
     : QDialog(parent)
     , ui(new Ui::profileMenu)
-    , dialog(this)
+    , nameDialog(this)
 {
-    qDebug() << "start: profileMenu cTor";
+    this->initProfMenu();
+    this->initConnects();
+}
 
+void profileMenu::initProfMenu(){
     this->ui->setupUi(this);
     this->ui->visibleProfileList->setSortingEnabled(true);
 
@@ -26,12 +34,7 @@ profileMenu::profileMenu(QWidget *parent)
 
     this->loadProfiles(); //needs to happen before construction of visibleProfileList
     this->constructVisibleListFromInternal();
-    this->dialog.setPtrToVisibleProfileList(this->ui->visibleProfileList);
-    qDebug() << "Profiles List is set";
-
-    for(qsizetype i = 0; i < this->internalProfilesList.count(); ++i){
-        qDebug() << "profilesList.at(" << i << ") : " << internalProfilesList.at(i);
-    }
+    this->nameDialog.setPtrToVisibleProfileList(this->ui->visibleProfileList);
 
     this->ui->btnEdit->setFocusProxy(nullptr);
     this->ui->btnNew->setFocusProxy(nullptr);
@@ -39,35 +42,27 @@ profileMenu::profileMenu(QWidget *parent)
     this->ui->btnCancel->setFocusProxy(nullptr);
     this->ui->visibleProfileList->setFocusProxy(nullptr);
     this->ui->btnSave->setFocusProxy(this->ui->visibleProfileList);
-
-    this->fixTabOrder();
     this->ui->visibleProfileList->setFocus();
+    this->fixTabOrder();
+}
 
-    connect(this->ui->btnNew, SIGNAL(clicked()), &(this->dialog), SLOT(startNewProfileCreation())); //new button
-    connect(this->ui->btnEdit, SIGNAL(clicked()), &(this->dialog), SLOT(startEditOfProfileName())); //edit button
+void profileMenu::initConnects(){
+    connect(this->ui->btnNew, SIGNAL(clicked()), &(this->nameDialog), SLOT(startNewProfileCreation())); //new button
+    connect(this->ui->btnEdit, SIGNAL(clicked()), &(this->nameDialog), SLOT(startEditOfProfileName())); //edit button
     connect(this->ui->btnDelete, SIGNAL(clicked()), this, SLOT(deleteButtonPressed())); //delete button
     connect(this->ui->btnCancel, SIGNAL(clicked()), this, SLOT(cancelButtonPressed())); //cancel button
     connect(this->ui->btnSave, SIGNAL(clicked()), this, SLOT(saveButtonPressed())); //save button
     connect(this, SIGNAL(rejected()), this, SLOT(handleRejectedSignal()));
 
     //callback from dialog, after new profile // editing of existing profile name
-    connect(&(this->dialog), SIGNAL(profileNameEdited(QString,QString)), this, SLOT(handleProfileNameEdited(QString,QString)));
-    connect(&(this->dialog), SIGNAL(createNewProfile(QString)), this, SLOT(handleNewProfileCreation(QString)));
+    connect(&(this->nameDialog), SIGNAL(profileNameEdited(QString,QString)), this, SLOT(handleProfileNameEdited(QString,QString)));
+    connect(&(this->nameDialog), SIGNAL(createNewProfile(QString)), this, SLOT(handleNewProfileCreation(QString)));
 
     connect(this->ui->visibleProfileList, SIGNAL(itemSelectionChanged()), this, SLOT(handleSelectedProfileChanged()));
-
-    qDebug() << "end: profileMenu cTor";
-}
-
-profileMenu::~profileMenu()
-{
-    qDebug() << "begin: profileMenu dTor";
-    delete this->ui;
-    qDebug() << "end: profileMenu dTor";
 }
 
 void profileMenu::constructVisibleListFromInternal(){
-    qDebug() << "Start : initVisibleListFromInternal";
+    qDebug() << "Start : constructVisibleListFromInternal";
 
     this->ui->visibleProfileList->clear();
     for(qsizetype i = 0; i < internalProfilesList.count(); ++i){
@@ -78,16 +73,16 @@ void profileMenu::constructVisibleListFromInternal(){
 
     //check that the currentActiveProfile lies within our now inited profiles list
     if(indexIsInBounds(this->currentActiveProfile, this->ui->visibleProfileList->count())){
-        qDebug() << "ID (" << this->currentActiveProfile << ") lies in in-bounds. Set it!";
+        qDebug() << "Current active profile (" << this->currentActiveProfile << ") lies in in-bounds. Set it!";
         this->ui->visibleProfileList->setCurrentRow(this->currentActiveProfile);
     }else{
-        qDebug() << "ID (" << this->currentActiveProfile << ") lies out of bounds... init as -1 instead.";
+        qDebug() << "Current active profile (" << this->currentActiveProfile << ") lies out of bounds... init as -1 instead.";
         this->ui->visibleProfileList->setCurrentRow(-1);
     }
     this->checkProfilesCountAndSetEditDel();
     this->currentActiveProfHasBeenDeleted = false; //reset
     this->savedIDOffset = 0;
-    qDebug() << "End : initVisibleListFromInternal";
+    qDebug() << "End : constructVisibleListFromInternal";
 }
 
 void profileMenu::saveVisibleListToInternal(){
@@ -106,16 +101,16 @@ void profileMenu::saveVisibleListToInternal(){
             qsizetype currSelRow = this->ui->visibleProfileList->currentRow();
             if(indexIsInBounds(currSelRow, visibleProfileCnt)){
                 indexOK = true;
-                qDebug() << "id (" << currSelRow << ") lies in in-bounds. Set currentActiveProfile to: " << currSelRow;
+                qDebug() << "Selected row (" << currSelRow << ") lies in in-bounds. Set currentActiveProfile to: " << currSelRow;
                 this->currentActiveProfile = currSelRow;
             }else{
-                qDebug() << "id (" << currSelRow << ") lies out of bounds (bad)";
+                qDebug() << "Selected row (" << currSelRow << ") lies out of bounds (bad)";
             }
         }else{
-            qDebug() << "No profile is currently selected (bad)";
+            qDebug() << "No profile is currently selected. OK, but got nothing to do.";
         }
     }else{
-        qDebug() << "visibleProfileCnt is less than 0 (bad)";
+        qDebug() << "visibleProfileCnt is less than 0 (BAD, how did this happen?)";
     }
     if(!indexOK){
         qDebug() << "Set currentActiveProfile as -1 instead.";
@@ -126,7 +121,7 @@ void profileMenu::saveVisibleListToInternal(){
 }
 
 void profileMenu::loadProfiles(){
-    qDebug() << "start: Loading profiles";
+    qDebug() << "start: loadProfiles";
     QSettings settings(appSettings::settingsFile, QSettings::IniFormat);
 
     if(!this->internalProfilesList.empty()){
@@ -141,35 +136,32 @@ void profileMenu::loadProfiles(){
     bool isOK = false;
     qsizetype tmpCurrSelIndex = tmpCurrSelIdVal.toInt(&isOK);
 
-    qDebug() << "read ID: " << tmpCurrSelIdVal << " ; profiles list size: " << this->internalProfilesList.size();
+    qDebug() << "read ID: " << tmpCurrSelIdVal << " ; internalProfilesList size: " << this->internalProfilesList.size();
     qDebug() << "currentActiveProfile before: " << this->currentActiveProfile;
 
-    //make sure the index is valid //ToDo combine cases?
-    if(isOK){
-        if(tmpCurrSelIndex < this->internalProfilesList.count()){
-            qDebug() << "index is valid";
-            this->currentActiveProfile = tmpCurrSelIndex;
-            this->ui->visibleProfileList->setCurrentRow(tmpCurrSelIndex);
-        }else{
-            qDebug() << "index out of range";
-            this->currentActiveProfile = -1; //index was invalid
-        }
+    //make sure the index is valid
+    if(isOK
+        && tmpCurrSelIndex >= 0
+        && tmpCurrSelIndex < this->internalProfilesList.count())
+    {
+        qDebug() << "index is valid.";
+        this->currentActiveProfile = tmpCurrSelIndex;
     }else{
-        qDebug() << "index not valid";
+        qDebug() << "index invalid. Set to -1.";
         this->currentActiveProfile = -1; //index was invalid
     }
-
+    this->ui->visibleProfileList->setCurrentRow(this->currentActiveProfile);
     qDebug() << "currentActiveProfile after: " << this->currentActiveProfile;
     settings.endGroup();
 
-    for(qsizetype i = 0; i < this->internalProfilesList.count(); ++i){
-        qDebug() << "i: " << i << " ; value: " << this->internalProfilesList.at(i);
-    }
-    qDebug() << "end: Loading profiles";
+    // for(qsizetype i = 0; i < this->internalProfilesList.count(); ++i){
+    //     qDebug() << "i: " << i << " ; value: " << this->internalProfilesList.at(i);
+    // }
+    qDebug() << "end: loadProfiles";
 }
 
 void profileMenu::saveProfiles(){
-    qDebug() << "start: Saving profiles";
+    qDebug() << "start: saveProfiles";
     QSettings settings(appSettings::settingsFile, QSettings::IniFormat);
 
     settings.beginGroup(appSettings::settingsGroupProfiles);
@@ -178,7 +170,6 @@ void profileMenu::saveProfiles(){
     bool indexOK = false;
     qsizetype tmpListSize = this->internalProfilesList.count();
     if(tmpListSize > 0){
-        qDebug() << "1 or more profiles exist! (good)";
         if(this->ui->visibleProfileList->selectedItems().count() == 1){
 
             qsizetype tmpValForCurrSelID = this->ui->visibleProfileList->currentRow();
@@ -193,13 +184,14 @@ void profileMenu::saveProfiles(){
                 qDebug() << "index is out of bounds, bad.";
             }
         }else{
-            qDebug() << "Index is invalid, bad.";
+            qDebug() << "0 or more than 1 profiles are currently selected.";
         }
     }else{
-        qDebug() << "no profiles exist, probably bad.";
+        qDebug() << "No profiles exist.";
     }
 
     if(!indexOK){
+        qDebug() << "Save -1 instead.";
         settings.setValue(appSettings::settingsValCurrProfileID,  QString::number(-1));
     }
 
@@ -207,6 +199,7 @@ void profileMenu::saveProfiles(){
     qDebug() << "end: Saving profiles";
 }
 
+//slot
 void profileMenu::deleteButtonPressed(){
     qDebug("Profiles: Delete Button pressed");
 
@@ -219,10 +212,10 @@ void profileMenu::deleteButtonPressed(){
     QList<QListWidgetItem*> allSelectedItems = ui->visibleProfileList->selectedItems();
 
     //note: We can only select one item in the list,
-    //      either one item selected or the list is empty
+    //      either one item is selected or the list is empty
     //      (we still signal the ERROR in the text box)
     if(allSelectedItems.empty()){
-        qDebug() << "No item selected..";
+        qDebug() << "No item selected.";
         confirmationText.append("ERROR");
     }else{
         QString textOfselectedItem = this->ui->visibleProfileList->selectedItems().at(0)->text();
@@ -280,18 +273,24 @@ void profileMenu::deleteButtonPressed(){
 }
 
 void profileMenu::commonCloseActions(){
-    qDebug() << "start: common close actions";
     this->constructVisibleListFromInternal();
     this->unsavedActions.clear();
     this->ui->visibleProfileList->setFocus();
-    this->close();
+    this->hide();
 }
 
+//slot
 void profileMenu::cancelButtonPressed(){
-    qDebug("Profiles: Cancel Button pressed");
     this->commonCloseActions();
 }
 
+//slot
+void profileMenu::handleRejectedSignal(){
+    this->commonCloseActions();
+    emit this->profMenuRejected();
+}
+
+//static
 void profileMenu::createProfilesFolderIfNotExist(){
     QString profilesFolderPath = QDir::currentPath() + profileMenu::profilesFolderName;
     if(!(QDir(profilesFolderPath).exists())){
@@ -300,11 +299,12 @@ void profileMenu::createProfilesFolderIfNotExist(){
     }
 }
 
-QString profileMenu::constructFilePathForProfileJson(QString profileName){
+//static
+QString profileMenu::constructFilePathForProfileJson(QString const &profileName){
     return (QDir::currentPath() + profileMenu::profilesFolderName + (profileName)) + ".json";
 }
 
-void profileMenu::renameProfilesJson(QString oldName, QString newName){
+void profileMenu::renameProfilesJson(QString const &oldName, QString const &newName){
     qDebug() << "renameProfilesJson. input: " << oldName << ", " << newName;
     QString oldNamePath = this->constructFilePathForProfileJson(oldName);
     QString newNamePath = this->constructFilePathForProfileJson(newName);
@@ -321,13 +321,12 @@ void profileMenu::renameProfilesJson(QString oldName, QString newName){
     qDebug() << "renameSuccess: " << renameSuccess;
 }
 
-void profileMenu::createNewProfilesJson(QString name){
+void profileMenu::createNewProfilesJson(QString const &name){
     qDebug() << "createNewProfilesJson. input: " << name;
-    //QString namePath = constructFilePathForProfileJson(name);
     emit this->newProfileCreated(name);
 }
 
-void profileMenu::deleteProfilesJson(QString name){
+void profileMenu::deleteProfilesJson(QString const &name){
     qDebug() << "deleteProfilesJson. input: " << name;
     QString namePath = this->constructFilePathForProfileJson(name);
     qDebug() << "deleteProfilesJson. path: " << namePath;
@@ -358,6 +357,7 @@ void profileMenu::processProfilesActions(){
     qDebug() << "end: processProfilesActions";
 }
 
+//slot
 void profileMenu::saveButtonPressed(){
     qDebug() << "start: saveButtonPressed";
 
@@ -370,8 +370,8 @@ void profileMenu::saveButtonPressed(){
     // 3) rename files to new names
     this->processProfilesActions();
 
-    qDebug() << "currentActiveProfile: " << currentActiveProfile;
-    qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
+    qDebug() << "currentActiveProfile: " << this->currentActiveProfile;
+    qDebug() << "currentActiveProfHasBeenDeleted: " << this->currentActiveProfHasBeenDeleted;
 
     if(indexIsInBounds(this->currentActiveProfile, this->internalProfilesList.count())){
         qDebug() << "currentActiveProfile is valid";
@@ -384,14 +384,16 @@ void profileMenu::saveButtonPressed(){
     this->hide();
 }
 
-void profileMenu::handleProfileNameEdited(QString oldName, QString newName){
+//slot
+void profileMenu::handleProfileNameEdited(QString const &oldName, QString const &newName){
     qDebug() << "(edit) oldName: " << oldName << ", newName: " << newName;
     this->ui->visibleProfileList->selectedItems().at(0)->setText(newName);
     this->unsavedActions.append(profAction{oldName, newName});
-    this->dialog.close();
+    this->nameDialog.close();
 }
 
-void profileMenu::handleNewProfileCreation(QString newName){
+//slot
+void profileMenu::handleNewProfileCreation(QString const &newName){
     qDebug() << "(new) userInput: " << newName;
     this->ui->visibleProfileList->addItem(newName);
     this->unsavedActions.append(profAction{"", newName});
@@ -404,10 +406,10 @@ void profileMenu::handleNewProfileCreation(QString newName){
         qDebug() << "row of new item: " << rowOfNewItem;
         this->ui->visibleProfileList->setCurrentRow(rowOfNewItem);
     }
-    this->dialog.close();
+    this->nameDialog.close();
 }
 
-qsizetype profileMenu::getProfilesCount(){
+qsizetype profileMenu::getProfilesCount() const{
     return this->internalProfilesList.count();
 }
 
@@ -419,25 +421,22 @@ QString profileMenu::getCurrSelProfileName() const{
     }
 }
 
-bool profileMenu::checkIfProfileIsInList(QString nameToCheck){
-    for(int i = 0; i < this->internalProfilesList.count(); ++i){
-        if(this->internalProfilesList.at(i) == nameToCheck){
+bool profileMenu::checkProfileNameIsInInternalList(QString const &nameToCheck) const{
+    for(auto &prof : this->internalProfilesList){
+        if(prof == nameToCheck){
             return true;
         }
     }
     return false;
 }
 
+//slot
 void profileMenu::handleSelectedProfileChanged(){
-    qDebug() << "start: handleSelectionChange";
     if(this->ui->visibleProfileList->selectedItems().count() > 0){
-        qDebug() << "enable";
         this->setEditDelEnabled();
     }else{
-        qDebug() << "disable";
         this->setEditDelDisabled();
     }
-    qDebug() << "end: handleSelectionChange";
 }
 
 void profileMenu::setEditDelEnabled(){
@@ -464,12 +463,6 @@ void profileMenu::fixTabOrder(){
     QWidget::setTabOrder(this->ui->btnDelete, this->ui->visibleProfileList);
     QWidget::setTabOrder(this->ui->visibleProfileList, this->ui->btnSave);
     QWidget::setTabOrder(this->ui->btnSave, this->ui->btnCancel);
-}
-
-void profileMenu::handleRejectedSignal(){
-    qDebug() << "rejected!";
-    this->commonCloseActions();
-    emit this->profMenuRejected();
 }
 
 void profileMenu::checkProfilesCountAndSetEditDel(){

@@ -17,7 +17,14 @@
 
 const QClipboard *MainWindow::clipboard = nullptr;
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::~MainWindow()
+{
+    this->saveAppSettings();
+    this->saveCurrentButtonsAsJson();
+    delete this->ui;
+}
+
+MainWindow::MainWindow(QWidget * const parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
       dynBtn(this),
@@ -26,27 +33,23 @@ MainWindow::MainWindow(QWidget *parent)
       moveBtnMenu(this),
       unmarkAllBtn(this)
 {
+    this->initMainWindow();
+    this->initUIButtons();
+    this->loadAppSettings();
+    this->setUpUnmarkAllBtn();
+    this->initScrollGrid();
+    this->initConnects();
+    this->initClipBoard();
+}
+
+void MainWindow::initMainWindow(){
     this->ui->setupUi(this);
     this->setWindowTitle(appSettings::appName);
     this->setFocusPolicy(Qt::StrongFocus); //without this, arrow keys do not work
     this->setMinimumSize(this->minWindowSize_w, this->minWindowSize_h);
+}
 
-    profileMenu::createProfilesFolderIfNotExist();
-
-    this->loadAppSettings();
-    this->currSelectedProfileName = this->profMenu.getCurrSelProfileName();
-
-    this->loadJsonOrCreateDefault();
-    this->setUpUnmarkAllBtn();
-    this->addDynBtnAtEndOfContentButtons();
-    this->updateProfileSettingsValidity();
-    this->fixTabOrder();
-
-    if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeDISABLED){
-        qDebug() << "CURR MODE >> DISABLED! (next: adjust buttons)";
-        adjustButtons(dynAddRmButton::btnModeDISABLED);
-    }
-
+void MainWindow::initUIButtons(){
     this->ui->hSpace1->changeSize(10,0);
     this->ui->hSpace2->changeSize(5,0);
     this->ui->buttonInfo->setToolTipDuration(INT_MAX);
@@ -59,15 +62,40 @@ MainWindow::MainWindow(QWidget *parent)
     //will become "enabled" as soon as there is input in the input field
     this->ui->buttonAdd->setDisabled(true);
     this->ui->buttonSearch->setDisabled(true);
+}
 
-    //unfortunately does not get rid of the "squished together buttons" problem
-    //when shrinking mainWindow past a certain size (not sure what is causing it or how to prevent it)
+void MainWindow::setUpUnmarkAllBtn(){
+    this->unmarkAllBtn.setText("Cancel: Do not delete selected buttons");
+    this->unmarkAllBtn.setStyleSheet("color: darkgreen; border: 1px solid lightgreen; border-radius: 30%; font-weight: bold;"
+                                     "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f6ffed, stop:1 #edfff4)");
+
+    this->unmarkAllBtn.hide(); //not visible at first (becomes visible after marking buttons for deletion)
+    connect(&(this->unmarkAllBtn), SIGNAL(clicked()), this, SLOT(unmarkAllContentButtons()));
+
+    this->ui->layoutAtTop->addWidget(&(this->unmarkAllBtn));
+    this->ui->layoutAtTop->setStretch(this->ui->layoutAtTop->indexOf(&(this->unmarkAllBtn)), this->stretchOfUnmarkAllBtn);
+}
+
+void MainWindow::initScrollGrid(){
     this->ui->scrollGrid->setHorizontalSpacing(scrollGridSpacing_h);
     this->ui->scrollGrid->setVerticalSpacing(scrollGridSpacing_v);
 
+    profileMenu::createProfilesFolderIfNotExist();
+    this->currSelectedProfileName = this->profMenu.getCurrSelProfileName();
+    this->loadJsonOrCreateDefault(); //needs to happen before adding the dynBtn
+    this->addDynBtnAtEndOfContentButtons();
+    this->updateProfileSettingsValidity();
+    this->fixTabOrder();
+
+    if(this->dynBtn.getCurrBtnMode() == dynButton::btnModeDISABLED){
+        adjustButtons(dynButton::btnModeDISABLED);
+    }
+}
+
+void MainWindow::initConnects(){
     connect(&(this->dynBtn), SIGNAL(released()), this, SLOT(processDynBtnMainAction()));
     connect(&(this->dynBtn), SIGNAL(keyPressOnDynBtn(int)), this, SLOT(processDynBtnKeyPress(int)));
-    connect(&(this->dynBtn), SIGNAL(mainWindowButtonsNeedSwitch(dynAddRmButton::btnMode)), this, SLOT(adjustButtons(dynAddRmButton::btnMode)));
+    connect(&(this->dynBtn), SIGNAL(mainWindowButtonsNeedSwitch(dynButton::btnMode)), this, SLOT(adjustButtons(dynButton::btnMode)));
 
     connect(&(this->profMenu), SIGNAL(selProfileHasChanged(QString,bool)), this, SLOT(updateButtonsForProfileChange(QString,bool)));
     connect(&(this->profMenu), SIGNAL(newProfileCreated(QString)), this, SLOT(createDefaultJsonForNewProfile(QString)));
@@ -79,17 +107,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this->ui->buttonAdd, SIGNAL(clicked()), this, SLOT(processActionForAddButton()));
     connect(this->ui->buttonSearch, SIGNAL(clicked()), this, SLOT(processActionForSearchButton()));
     connect(this->ui->textInputField, SIGNAL(textChanged(QString)), this, SLOT(processTextFieldChange(QString)));
+}
 
+void MainWindow::initClipBoard(){
     if(!clipboard){ clipboard = QApplication::clipboard(); }
     connect(clipboard, SIGNAL(dataChanged()), this, SLOT(processClipBoard()));
     this->processClipBoard(); //process initial clipboard
-}
-
-MainWindow::~MainWindow()
-{
-    this->saveAppSettings();
-    this->saveCurrentButtonsAsJson();
-    delete this->ui;
 }
 
 void MainWindow::updatePlaceholderProfileNameText(){
@@ -116,16 +139,9 @@ void MainWindow::loadJsonOrCreateDefault(){
         //check if file even exists
         if(!jsonFileExists){
             qDebug() << "jsonFile of path " << this->pathToFileForSelectedProfile + "does not exist";
-
-            //create default file instead
+            //create default file if none exist
             this->saveDefaultJsonForProfile(pathToFileForSelectedProfile);
-
-            //ToDo init default state of App or something...
-            //for now just open the profiles Menu, which forces creation of a profile
-            //profMenu->show(); //WARNING does not appear in center of main window, since that is not shown yet (OK for now)
-            //loadDefaultAppState();
         }else{
-            //loads all existing buttons before ADDING(!) the dynamic +/- button
             this->loadButtonsFromJson();
             qDebug() << "All buttons loaded.";
         }
@@ -134,14 +150,12 @@ void MainWindow::loadJsonOrCreateDefault(){
 }
 
 void MainWindow::fixTabOrder(){
-    qDebug() << "start: Fix Tab Order";
     QWidget::setTabOrder(this->ui->buttonProfile, this->ui->textInputField);
     QWidget::setTabOrder(this->ui->textInputField, this->ui->buttonSearch);
     QWidget::setTabOrder(this->ui->buttonSearch, this->ui->buttonAdd);
     QWidget::setTabOrder(this->ui->buttonAdd, &(this->unmarkAllBtn));
 
     if(this->contentBtnList.count() > 0){
-        qDebug() << "count() > 0";
         QWidget::setTabOrder(&(this->unmarkAllBtn), this->contentBtnList.at(0));
         for(qsizetype i = 0; i < this->contentBtnList.count() - 1; ++i){
             qDebug() << "i : " << i;
@@ -151,7 +165,6 @@ void MainWindow::fixTabOrder(){
     }else{
         QWidget::setTabOrder(&(this->unmarkAllBtn), &(this->dynBtn));
     }
-    qDebug() << "end: Fix Tab order";
 }
 
 void MainWindow::loadAppSettings(){
@@ -185,11 +198,11 @@ void MainWindow::loadAppSettings(){
     this->move(pos_x, pos_y);
 
     if(!width_ok || width < this->minWindowSize_w){
-        qDebug() << "read width not OK. Set default value.";
+        qDebug() << "read width not OK. Set default value: " << this->defaultWindowSize_w;
         width = this->defaultWindowSize_w;
     }
     if(!height_ok || height < this->minWindowSize_h){
-        qDebug() << "read height not OK. Set default value.";
+        qDebug() << "read height not OK. Set default value:" << this->defaultWindowSize_h;
         height = this->defaultWindowSize_h;
     }
     this->resize(width, height);
@@ -204,21 +217,6 @@ void MainWindow::saveAppSettings(){
     settings.setValue(appSettings::settingsValMWPosX, QString::number(this->pos().x()));
     settings.setValue(appSettings::settingsValMWPosY, QString::number(this->pos().y()));
     settings.endGroup();
-}
-
-void MainWindow::setUpUnmarkAllBtn(){
-    qDebug() << "start: setUpUnmarkAllBtn";
-
-    this->unmarkAllBtn.setText("Cancel: Do not delete selected buttons");
-    this->unmarkAllBtn.setStyleSheet("color: darkgreen; border: 1px solid lightgreen; border-radius: 30%; font-weight: bold;"
-                                      "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #f6ffed, stop:1 #edfff4)");
-
-    //not visible at first
-    this->unmarkAllBtn.hide();
-    this->ui->layoutAtTop->addWidget(&(this->unmarkAllBtn));
-
-    this->ui->layoutAtTop->setStretch(this->ui->layoutAtTop->indexOf(&(this->unmarkAllBtn)), this->stretchOfUnmarkAllBtn);
-    connect(&(this->unmarkAllBtn), SIGNAL(clicked()), this, SLOT(unmarkAllContentButtons()));
 }
 
 void MainWindow::addDynBtnAtEndOfContentButtons(){
@@ -240,7 +238,7 @@ void MainWindow::addDynBtnAtEndOfContentButtons(){
              << this->ui->scrollGrid->columnCount() << ")";
 }
 
-void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString title, QString content){
+void MainWindow::createAndAddNewButton(qsizetype const row, qsizetype const col, QString const &title, QString const &content){
     qDebug() << "(create and add new button) scroll grid count: "
              << this->ui->scrollGrid->count() << " (row count: "
              << this->ui->scrollGrid->rowCount() << ", column count: "
@@ -248,7 +246,13 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
 
     qDebug() << "insert at: " << " (" << row << "," << col << ")";
     contentButton *newContentBtn = new contentButton(this);
-    newContentBtn->setTitle(title.remove('\n'));
+    if(title.contains('\n')){
+        QString titleNoLinebreaks(title);
+        titleNoLinebreaks.remove('\n');
+        newContentBtn->setTitle(titleNoLinebreaks);
+    }else{
+        newContentBtn->setTitle(title);
+    }
     newContentBtn->setContent(content);
     if(this->clipboard->text().length() > 0){
         newContentBtn->enablePasteContent();
@@ -264,14 +268,14 @@ void MainWindow::createAndAddNewButton(qsizetype row, qsizetype col, QString tit
     this->contentBtnList.append(newContentBtn);
     qDebug() << "Added to contentBtnList";
 
-    connect(newContentBtn, SIGNAL(dynBtnSetMode(dynAddRmButton::btnMode)), &(this->dynBtn), SLOT(setMode(dynAddRmButton::btnMode)));
+    connect(newContentBtn, SIGNAL(dynBtnSetMode(dynButton::btnMode)), &(this->dynBtn), SLOT(setMode(dynButton::btnMode)));
     connect(newContentBtn, SIGNAL(keyWasPressed(int,qsizetype)), this, SLOT(processContentButtonKeyPress(int,qsizetype)));
     connect(newContentBtn, SIGNAL(startContentButtonEdit(qsizetype)), this, SLOT(startButtonEdit(qsizetype)));
     connect(newContentBtn, SIGNAL(deleteButton(qsizetype)), this, SLOT(processSingleButtonDeletion(qsizetype)));
     connect(newContentBtn, SIGNAL(saveButtonChangesIntoJSON()), this, SLOT(saveCurrentButtonsAsJson()));
     connect(newContentBtn, SIGNAL(deleteAllMarkedButtons()), this, SLOT(processRemoveAllMarkedButtons()));
     connect(newContentBtn, SIGNAL(moveButton(qsizetype)), this, SLOT(openMoveButtonMenu(qsizetype)));
-    qDebug() << "everything has been connected!";
+    qDebug() << "Everything has been connected!";
 }
 
 void MainWindow::loadButtonsFromJson(){
@@ -298,46 +302,46 @@ void MainWindow::loadButtonsFromJson(){
     fileAsString = inStream.readAll();
     file.close();
 
-    qDebug() << "File as string: " << fileAsString;
+    // qDebug() << "File as string: " << fileAsString;
 
     QByteArray jsonBA = fileAsString.toLocal8Bit(); //BA = ByteArray
     QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonBA);
 
     if(jsonDoc.isNull()){
         qDebug() << "Failed to create JSON document.";
-        exit(2);
+        exit(EXIT_FAILURE);
     }
+
     if(!jsonDoc.isObject()){
         qDebug() << "JSON File @ " << pathToFileForSelectedProfile << " is not a proper JSON Document.";
-        exit(3);
+        exit(EXIT_FAILURE);
     }
 
     QJsonObject jsonObjAllButtons = jsonDoc.object();
 
     if(jsonObjAllButtons.isEmpty()){
         qDebug()<<"JSON object is empty.";
-        exit(4);
+        exit(EXIT_FAILURE);
     }
 
-    qDebug() << "Everything good.";
-
     qDebug() << "jsonObjAllButtons.count(): " << jsonObjAllButtons.count();
-    qDebug() << "jsonObjAllButtons.value(): " << jsonObjAllButtons.value("contentButtons");
+    // qDebug() << "jsonObjAllButtons.value(): " << jsonObjAllButtons.value("contentButtons");
 
     QJsonValue contentButtonsArrAsVal = jsonObjAllButtons.value("contentButtons");
     QJsonArray contentButtonsArr = contentButtonsArrAsVal.toArray();
 
-    qDebug() << "contentButtonsArr: " << contentButtonsArr <<
-        ".count: " << contentButtonsArr.count();
+    qDebug() << "count: " << contentButtonsArr.count();
+    // qDebug() << "contentButtonsArr: " << contentButtonsArr;
 
     for(qsizetype i = 0; i < contentButtonsArr.count(); ++i){
 
-        qDebug() << "i (" << i << ")" << contentButtonsArr.at(i);
+        // qDebug() << "i (" << i << ")" << contentButtonsArr.at(i);
 
         QJsonObject contentButtonObj = contentButtonsArr.at(i).toObject();
         QJsonValue contentButtonValTitle = contentButtonObj.value("title");
         QJsonValue contentButtonValContent = contentButtonObj.value("content");
-        qDebug() << "contentButtonValContent: " << contentButtonValContent;
+
+        // qDebug() << "contentButtonValContent: " << contentButtonValContent;
 
         QString contentButtonValTitleAsStr = contentButtonValTitle.toString();
         QString contentButtonValContentAsStr = contentButtonValContent.toString();
@@ -349,7 +353,7 @@ void MainWindow::loadButtonsFromJson(){
     this->updateIndexOfAllButtons();
 }
 
-void MainWindow::processAddANewButton(QString defaultText){
+void MainWindow::processAddANewButton(QString const &defaultText){
     qDebug() << "start: processAddANewButton";
     this->ui->scrollGrid->removeWidget(&(this->dynBtn));
     qsizetype row = this->ui->scrollGrid->count() / this->maxItemsPerRow;
@@ -367,18 +371,19 @@ void MainWindow::processAddANewButton(QString defaultText){
     this->saveCurrentButtonsAsJson(); //ToDo optimize "saveJSONforSingleButton" (or similar)
 }
 
+//slot
 void MainWindow::saveCurrentButtonsAsJson(){
     qDebug() << "start: saveCurrentButtonsAsJson";
     this->saveButtonsAsJson(this->pathToFileForSelectedProfile, this->contentBtnList);
 }
 
-void MainWindow::saveDefaultJsonForProfile(QString pathToFile){
+void MainWindow::saveDefaultJsonForProfile(QString const &pathToFile){
     qDebug() << "start: saveDefaultJsonForProfile";
     QVector<contentButton*> dummy; //empty list stays empty
     this->saveButtonsAsJson(pathToFile, dummy);
 }
 
-void MainWindow::saveButtonsAsJson(QString pathToFile, QVector<contentButton*> listOfBtns){
+void MainWindow::saveButtonsAsJson(QString const &pathToFile, QVector<contentButton*> const &listOfBtns){
     qDebug() << "start: saveButtonsAsJson (pathToFile: " << pathToFile << ")";
     //making sure not to safe into an empty string, this case should technically never happen,
     //unless somehow no profile is selected which also should never happen... but there is a chance
@@ -418,17 +423,18 @@ void MainWindow::saveButtonsAsJson(QString pathToFile, QVector<contentButton*> l
     qDebug() << "end: saveButtonsAsJson";
 }
 
+//slot
 void MainWindow::unmarkAllContentButtons(){
-    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-        this->contentBtnList.at(i)->unsetMarkedForDeletion();
+    for(auto &btn : this->contentBtnList){
+        btn->unsetMarkedForDeletion();
     }
-    if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeRM){
-        this->dynBtn.setMode(dynAddRmButton::btnModeADD);
+    if(this->dynBtn.getCurrBtnMode() == dynButton::btnModeRM){
+        this->dynBtn.setMode(dynButton::btnModeADD);
         contentButton::restoreLastUnfocusedButtonToFocusedButton();
     }
 }
 
-void MainWindow::focusContentButton(contentButton *btn){
+void MainWindow::focusContentButton(contentButton * const btn){
     qDebug() << "start: focusContentButton";
     btn->gainFocus();
     this->ui->scrollArea->ensureWidgetVisible(btn);
@@ -460,25 +466,23 @@ void MainWindow::doDefaultFocus(){
             focusHasBeenSet = true;
         }
     }
-
     if(!focusHasBeenSet){
         qDebug() << "scrollGrid is empty. Give focus to dynBtn.";
         this->focusDynBtn();
-
     }
 }
 
-qsizetype MainWindow::getHiddenButtonCount(){
+qsizetype MainWindow::getHiddenButtonCount() const{
     qsizetype hiddenButtonCount = 0;
-    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-        if(this->contentBtnList.at(i)->isHidden()){
+    for(auto &btn : this->contentBtnList){
+        if(btn->isHidden()){
             ++hiddenButtonCount;
         }
     }
     return hiddenButtonCount;
 }
 
-qsizetype MainWindow::getAdjustedIndexOfSenderForSearch(qsizetype indexOfSender){
+qsizetype MainWindow::getAdjustedIndexOfSenderForActiveSearch(qsizetype indexOfSender) const{
     //this logic works, but is a bit hard to understand. There might be a simpler way to do this
     qsizetype visibleCount = 0;
     for(qsizetype i = 0; i < this->contentBtnList.count() && visibleCount <= indexOfSender; ++i){
@@ -491,26 +495,26 @@ qsizetype MainWindow::getAdjustedIndexOfSenderForSearch(qsizetype indexOfSender)
     return indexOfSender;
 }
 
-qsizetype MainWindow::getAdjustedNewIndexForSearch(qsizetype newIndex){
-    qDebug() << "start: getAdjustedNewIndexForSearch (newIndex: " << newIndex;
-    for(qsizetype i = 0; i < this->contentBtnList.count() && i <= newIndex; i++){
+qsizetype MainWindow::getAdjustedNewIndexForActiveSearch(qsizetype newIndex) const{
+    qDebug() << "start: getAdjustedNewIndexForSearch (unadjusted newIndex: " << newIndex << ")";
+    for(qsizetype i = 0; i < this->contentBtnList.count() && i <= newIndex; ++i){
         if(this->contentBtnList.at(i)->isHidden()){
-            newIndex++;
+            ++newIndex;
         }
     }
-    qDebug() << "adjusted index: " << newIndex;
+    qDebug() << "adjusted newIndex: " << newIndex;
     return newIndex;
 }
 
-qsizetype MainWindow::getSearchAdjustedIndexIfSearchIsActive(qsizetype index){
+qsizetype MainWindow::getSearchAdjustedIndexIfSearchIsActive(qsizetype index) const{
     qDebug() << "start: getSearchAdjustedIndexIfSearchIsActive";
     if(this->searchActive){
-        index = this->getAdjustedNewIndexForSearch(index);
+        index = this->getAdjustedNewIndexForActiveSearch(index);
     }
     return index;
 }
 
-void MainWindow::processArrowKeyPress(int key, qsizetype indexOfSender){
+void MainWindow::processArrowKeyPress(int const key, qsizetype indexOfSender){
     qDebug() << "start: processArrowKeyPress (index of sender: " << indexOfSender << ")";
 
     qsizetype sizeForCalc = this->contentBtnList.count();
@@ -525,7 +529,7 @@ void MainWindow::processArrowKeyPress(int key, qsizetype indexOfSender){
     if(this->searchActive){
         qDebug() << "search is active! adjust size!";
         sizeForCalc -= this->getHiddenButtonCount();
-        indexOfSender = this->getAdjustedIndexOfSenderForSearch(indexOfSender);
+        indexOfSender = this->getAdjustedIndexOfSenderForActiveSearch(indexOfSender);
     }
     qDebug() << "(after adj.) sizeForCalc: " << sizeForCalc;
     qDebug() << "(after adj.) indexOfSender: " << indexOfSender;
@@ -572,7 +576,7 @@ void MainWindow::processArrowKeyPress(int key, qsizetype indexOfSender){
     qDebug() << "(before adj.) newIndex: " << newIndex;
     if(this->searchActive){
         qDebug() << "search is active! adjust index!";
-        newIndex = this->getAdjustedNewIndexForSearch(newIndex);
+        newIndex = this->getAdjustedNewIndexForActiveSearch(newIndex);
     }
     qDebug() << "(after adj.) newIndex: " << newIndex;
 
@@ -585,12 +589,12 @@ void MainWindow::processArrowKeyPress(int key, qsizetype indexOfSender){
     qDebug() << "end: processArrowKeyPress";
 }
 
-void MainWindow::processSingleButtonDeletion(qsizetype indexOfSender){
+//slot
+void MainWindow::processSingleButtonDeletion(qsizetype const indexOfSender){
     qDebug() << "start: processDeleteKeyPress (index of sender: " << indexOfSender << ")";
 
     QMessageBox::StandardButton reply;
 
-    //ToDo, once buttons have names/labels/titles, include it in the confirmation question's text
     reply = QMessageBox::question(this, "Delete button confirmation",
                                   "Do you really want to delete <b>this</b> button?"
                                   "<br><br><i><b><u>WARNING:</u></b> This action is <b>irreversible!</b></i>",
@@ -604,7 +608,7 @@ void MainWindow::processSingleButtonDeletion(qsizetype indexOfSender){
 
         //give focus to the button that now resides in the removed button's place (or dynBtn)
         qDebug() << "give focus to the button that now resides in the removed button's place (or dynBtn)";
-        qsizetype adjustedIndex = this->getAdjustedIndexOfSenderForSearch(indexOfSender);
+        qsizetype adjustedIndex = this->getAdjustedIndexOfSenderForActiveSearch(indexOfSender);
         qDebug() << "indexOfSender: " << indexOfSender;
         qDebug() << "adjustedIndex: " << adjustedIndex;
         qDebug() << "scrollGrid Count: " << this->ui->scrollGrid->count();
@@ -643,12 +647,11 @@ void MainWindow::processMinusKey(){
     if(contentButton::getMarkedForDelCnt() > 0){
         this->processRemoveAllMarkedButtons();
     }else{
-        qDebug() << "no buttons marked for deletion. Do nothing.";
+        qDebug() << "No buttons marked for deletion. Do nothing.";
     }
 }
 
 void MainWindow::processEscapeKey(){
-    qDebug() << "start: processEscapeKey";
     this->ui->textInputField->clearFocus();
     this->dynBtn.clearFocus();
     contentButton::clearFocusedButton();
@@ -656,8 +659,7 @@ void MainWindow::processEscapeKey(){
     this->unmarkAllContentButtons();
 }
 
-void MainWindow::processRemainingKeys(int key){
-    qDebug() << "start: processRemainingKeys";
+void MainWindow::processRemainingKeys(int const key){
     if(key == Qt::Key_Plus){
         this->processAddANewButton("");
     }else if(key == Qt::Key_Minus){
@@ -665,15 +667,13 @@ void MainWindow::processRemainingKeys(int key){
     }else if(key == Qt::Key_Escape){
         this->processEscapeKey();
     }else if(key == Qt::Key_P){
-        contentButton::clearFocusedButton(); //this is done to make it equal to pressing the profile button, otherwise there is different (buggy) behaviour
+        contentButton::clearFocusedButton(); //this is done to make it equal to pressing the profile button
+                                             //otherwise there is a different (but also buggy) behaviour
         this->profMenu.show();
     }else if(key == Qt::Key_S){
-        qDebug() << "key == S";
         if(this->searchActive){
-            qDebug() << "search is active";
             this->ui->buttonSearch->click(); //basically disables the search
         }else{
-            qDebug() << "search is not active";
             this->ui->textInputField->setFocus();
         }
     }else{
@@ -681,12 +681,13 @@ void MainWindow::processRemainingKeys(int key){
     }
 }
 
+//slot
 void MainWindow::processDynBtnMainAction(){
     if(this->checkProfileSettingsValidPopUpIfNot()){
-        if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeADD){
+        if(this->dynBtn.getCurrBtnMode() == dynButton::btnModeADD){
             this->processAddANewButton("");
             this->focusHackSolution();
-        }else if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeRM){
+        }else if(this->dynBtn.getCurrBtnMode() == dynButton::btnModeRM){
             this->processRemoveAllMarkedButtons();
         }else{
             qDebug() << "button mode is invalid.";
@@ -694,13 +695,13 @@ void MainWindow::processDynBtnMainAction(){
     }
 }
 
-void MainWindow::processDynBtnKeyPress(int key){
-    qDebug() << "start: processDynBtnKeyPress";
+//slot
+void MainWindow::processDynBtnKeyPress(int const key){
     if(key == Qt::Key_P || this->profileSettingsValid == true){
         if(key == Qt::Key_Left || key == Qt::Key_Right
             || key == Qt::Key_Up || key == Qt::Key_Down){
-            //expl: The dynBtn is always at the very end of all buttons
-            //so that's the index we will be working with
+            //expl for 2nd argument: The dynBtn is always at the very end, after
+            //all content buttons, so that is the pseudo-index we will be working with
             this->processArrowKeyPress(key, this->contentBtnList.count());
         }else if(key == Qt::Key_Return || key == Qt::Key_Enter){
             this->processDynBtnMainAction();
@@ -708,11 +709,10 @@ void MainWindow::processDynBtnKeyPress(int key){
             this->processRemainingKeys(key);
         }
     }
-    qDebug() << "end: processDynBtnKeyPress";
 }
 
-void MainWindow::processContentButtonKeyPress(int key, qsizetype indexOfSender){
-    qDebug() << "start: processKeyPress (index of sender: " << indexOfSender << ")";
+//slot
+void MainWindow::processContentButtonKeyPress(int const key, qsizetype const indexOfSender){
     if(indexIsInBounds(indexOfSender, this->contentBtnList.count())){
         if(key == Qt::Key_Left || key == Qt::Key_Right
             || key == Qt::Key_Up || key == Qt::Key_Down){
@@ -727,13 +727,12 @@ void MainWindow::processContentButtonKeyPress(int key, qsizetype indexOfSender){
             }
         }
     }else{
-        qDebug() << "index is out of bounds.";
+        qDebug() << "Index is out of bounds.";
     }
-    qDebug() << "end: processKeyPress";
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *event){
-    qDebug() << "start: key press event! (MainWindow)";
+void MainWindow::keyPressEvent(QKeyEvent * const event){
+    qDebug() << "start: keyPressEvent! (MainWindow)";
     int key = event->key();
     if(key == Qt::Key_P || this->profileSettingsValid == true){
         qDebug() << "got key! (" << QKeySequence(key).toString() << ")";
@@ -756,14 +755,13 @@ void MainWindow::keyPressEvent(QKeyEvent *event){
             this->processRemainingKeys(key);
         }
     }
-    qDebug() << "end: Key press event! (MainWindow)";
+    qDebug() << "end: keyPressEvent! (MainWindow)";
 }
 
+//slot
 void MainWindow::processActionForAddButton(){
-    qDebug() << "Add button clicked.";
     QString currInputFieldText = this->ui->textInputField->text();
     if(!currInputFieldText.isEmpty()){
-        qDebug() << "There is text.";
         this->processAddANewButton(currInputFieldText);
         this->ui->textInputField->setText(""); //keep this before focus logic or else this will cause
                                                //"pseudo focused content buttons" for some strange reason...
@@ -773,15 +771,15 @@ void MainWindow::processActionForAddButton(){
     }
 }
 
-void MainWindow::disableMoveButtonForAllButtons(){
-    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-        this->contentBtnList.at(i)->disableMoveButton();
+void MainWindow::enableMoveButtonForAllButtons(){
+    for(auto &btn : this->contentBtnList){
+        btn->enableMoveButton();
     }
 }
 
-void MainWindow::enablePasteForAllButtons(){
-    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-        this->contentBtnList.at(i)->enablePasteContent();
+void MainWindow::disableMoveButtonForAllButtons(){
+    for(auto &btn : this->contentBtnList){
+        btn->disableMoveButton();
     }
 }
 
@@ -802,25 +800,24 @@ void MainWindow::setSearchInactive(){
         this->ui->buttonProfile->setEnabled(true);
         this->ui->buttonAdd->setEnabled(true);
         this->ui->textInputField->setEnabled(true);
-        this->ui->textInputField->setFocusPolicy(Qt::StrongFocus); //somehow the input field is no longer clickable after search otherwise
+        this->ui->textInputField->setFocusPolicy(Qt::StrongFocus); //without this the input field is no longer clickable after search
         this->ui->textInputField->setStyleSheet("");
         this->ui->buttonSearch->setStyleSheet("");
         this->enableMoveButtonForAllButtons();
         this->searchActive = false;
-        qDebug() << "end of setSearchInactive (search was active before)";
     }
 }
 
-void MainWindow::checkSearchMatchForAllButtons(QString searchString){
-    for(qsizetype i = 0; i < this->contentBtnList.count(); i++){
-        this->contentBtnList.at(i)->checkIfSearchIsMatched(searchString);
+void MainWindow::checkSearchMatchForAllButtons(QString const &searchString){
+    for(auto &btn : this->contentBtnList){
+        btn->checkIfSearchIsMatched(searchString);
     }
     this->rebuildGrid();
 }
 
 void MainWindow::resetSearchStatusOfAllButtons(){
-    for(qsizetype i = 0; i < this->contentBtnList.count(); i++){
-        this->contentBtnList.at(i)->resetSearchStatus();
+    for(auto &btn : this->contentBtnList){
+        btn->resetSearchStatus();
     }
     this->rebuildGrid();
 }
@@ -846,14 +843,14 @@ void MainWindow::popUpForProfileSettingsInvalid(){
 void MainWindow::updateProfileSettingsValidity(){
     if(this->profMenu.getProfilesCount() > 0 && this->currSelectedProfileName.length() > 0){
         if(this->profileSettingsValid == false){
-            if(this->dynBtn.getCurrBtnMode() == dynAddRmButton::btnModeDISABLED){
-                this->dynBtn.setMode(dynAddRmButton::btnModeADD);
+            if(this->dynBtn.getCurrBtnMode() == dynButton::btnModeDISABLED){
+                this->dynBtn.setMode(dynButton::btnModeADD);
             }
         }
         this->profileSettingsValid = true;
     }else{
         if(this->profileSettingsValid == true){
-            this->dynBtn.setMode(dynAddRmButton::btnModeDISABLED);
+            this->dynBtn.setMode(dynButton::btnModeDISABLED);
         }
         this->profileSettingsValid = false;
     }
@@ -868,38 +865,29 @@ bool MainWindow::checkProfileSettingsValidPopUpIfNot(){
     }
 }
 
+//slot
 void MainWindow::processActionForSearchButton(){
-    qDebug() << "Search button clicked";
     QString currInputFieldText = this->ui->textInputField->text();
     if(!currInputFieldText.isEmpty()){
-        qDebug() << "There is text.";
         if(this->ui->buttonSearch->isChecked()){
-            qDebug() << "Search button is checked.";
             this->checkSearchMatchForAllButtons(currInputFieldText);
             this->setSearchActive();
         }else{
-            qDebug() << "Search button is not checked.";
             this->resetSearchStatusOfAllButtons();
             this->setSearchInactive();
         }
-
-        //ToDo check if needed, but they might be a good idea
-        // contentButton::clearFocusedButton();
-        // contentButton::clearLastUnfocusedButton();
-
     }else{
-        qDebug() << "No text in field.";
+        qDebug() << "No text in input field.";
     }
     this->ui->textInputField->setFocus();
 }
 
-void MainWindow::processTextFieldChange(QString text){
+//slot
+void MainWindow::processTextFieldChange(QString const &text){
     if(!text.isEmpty()){
-        qDebug() << "processTextFieldChange (text: " << text << ")";
         this->ui->buttonAdd->setEnabled(true);
         this->ui->buttonSearch->setEnabled(true);
     }else{
-        qDebug() << "processTextFieldChange, empty text.";
         this->ui->buttonAdd->setDisabled(true);
         this->ui->buttonSearch->setDisabled(true);
     }
@@ -911,7 +899,7 @@ void MainWindow::updateIndexOfAllButtons(){
     }
 }
 
-void MainWindow::removeSelectedButton(qsizetype index){
+void MainWindow::removeSelectedButton(qsizetype const index){
 
     qDebug() << "start: removeSelectedButton (index: " << index;
 
@@ -980,8 +968,8 @@ void MainWindow::removeAllButtonsThatAreMarkedForDel(){
 
 void MainWindow::deleteAllItemsFromGrid(){
     qDebug() << "start: deleteAllItemsFromGrid";
-    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-        this->ui->scrollGrid->removeWidget(this->contentBtnList.at(i));
+    for(auto &btn : this->contentBtnList){
+        this->ui->scrollGrid->removeWidget(btn);
     }
     this->ui->scrollGrid->removeWidget(&(this->dynBtn));
     qDebug() << "scrollGrid row count: " << this->ui->scrollGrid->rowCount();
@@ -1018,6 +1006,7 @@ void MainWindow::rebuildGrid(){
     this->fixTabOrder();
 }
 
+//slot
 void MainWindow::processRemoveAllMarkedButtons(){
     qDebug() << "start: processRemoveAllMarkedButtons";
 
@@ -1062,16 +1051,17 @@ void MainWindow::clearContentButtonList(){
     qDebug() << "(clear list) count of scrollGrid items: " << this->ui->scrollGrid->count();
 }
 
-void MainWindow::changeProfileName(QString newName){
+void MainWindow::changeProfileName(QString const &newName){
     this->currSelectedProfileName = newName;
     this->pathToFileForSelectedProfile = profileMenu::constructFilePathForProfileJson(currSelectedProfileName);
 }
 
-void MainWindow::setDisplayedProfileName(QString name){
+void MainWindow::setDisplayedProfileName(QString const &name){
     this->ui->buttonProfile->setText(name);
 }
 
-void MainWindow::updateButtonsForProfileChange(QString profileName, bool currentActiveProfHasBeenDeleted){
+//slot
+void MainWindow::updateButtonsForProfileChange(QString const &profileName, bool const currentActiveProfHasBeenDeleted){
     qDebug() << "start: updateButtonsForProfileChange";
     qDebug() << "received name: " << profileName;
     qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
@@ -1084,7 +1074,7 @@ void MainWindow::updateButtonsForProfileChange(QString profileName, bool current
         if(this->profileSettingsValid){
             if(currentActiveProfHasBeenDeleted == false){
                 qDebug() << "current active profile has NOT been deleted";
-                if(this->profMenu.checkIfProfileIsInList(this->currSelectedProfileName)){
+                if(this->profMenu.checkProfileNameIsInInternalList(this->currSelectedProfileName)){
                     qDebug() << "current active profile is still in list --> save current buttons!";
                     this->saveCurrentButtonsAsJson();
                 }else{
@@ -1118,15 +1108,19 @@ void MainWindow::updateButtonsForProfileChange(QString profileName, bool current
     qDebug() << "end: updateButtonsForProfileChange";
 }
 
-void MainWindow::createDefaultJsonForNewProfile(QString profileName){
+//slot
+void MainWindow::createDefaultJsonForNewProfile(QString const &profileName){
     qDebug() << "start: createDefaultJsonForNewProfile (profileName: " << profileName << ")";
     this->saveDefaultJsonForProfile(profileMenu::constructFilePathForProfileJson(profileName));
     qDebug() << "end: createDefaultJsonForNewProfile";
 }
 
-void MainWindow::startButtonEdit(qsizetype indexOfSender){
+//slot
+void MainWindow::startButtonEdit(qsizetype const indexOfSender){
     qDebug() << "start: startButtonEdit";
     if(indexIsInBounds(indexOfSender, this->contentBtnList.count())){
+        QPoint btnPoint = this->pos() + this->contentBtnList.at(indexOfSender)->pos();
+        this->btnEdit.move(btnPoint);
         this->btnEdit.editButton(this->contentBtnList.at(indexOfSender));
     }else{
         qDebug() << "Invalid index.";
@@ -1134,16 +1128,24 @@ void MainWindow::startButtonEdit(qsizetype indexOfSender){
     qDebug() << "end: startButtonEdit";
 }
 
-void MainWindow::openMoveButtonMenu(qsizetype indexOfSender){
+//slot
+void MainWindow::openMoveButtonMenu(qsizetype const indexOfSender){
     qDebug() << "start: openMoveButtonMenu";
     if(!(this->searchActive)){
-        this->moveBtnMenu.openMenu(indexOfSender, contentButton::getTotalCnt()-1);
+        if(indexIsInBounds(indexOfSender, this->contentBtnList.count())){
+            QPoint btnPoint = this->pos() + this->contentBtnList.at(indexOfSender)->pos();
+            this->moveBtnMenu.move(btnPoint);
+            this->moveBtnMenu.openMenu(indexOfSender, contentButton::getTotalCnt()-1);
+        }else{
+            qDebug() << "invalid index.";
+        }
     }else{
         qDebug() << "Not allowed to open move button menu while search is active";
     }
 }
 
-void MainWindow::moveButtonInList(qsizetype oldIndex, qsizetype newIndex){
+//slot
+void MainWindow::moveButtonInList(qsizetype const oldIndex, qsizetype const newIndex){
     qDebug() << "start: moveButtonInList";
     if(indexIsInBounds(oldIndex, this->contentBtnList.count())
         && indexIsInBounds(newIndex, this->contentBtnList.count())){
@@ -1154,7 +1156,7 @@ void MainWindow::moveButtonInList(qsizetype oldIndex, qsizetype newIndex){
     this->rebuildGrid();
 }
 
-void MainWindow::mousePressEvent(QMouseEvent *event){
+void MainWindow::mousePressEvent(QMouseEvent *const event){
     Q_UNUSED(event);
     qDebug() << "start: mousePressEvent";
     contentButton::clearFocusedButton();
@@ -1167,35 +1169,36 @@ void MainWindow::mousePressEvent(QMouseEvent *event){
     qDebug() << "end: mousePressEvent";
 }
 
-void MainWindow::adjustMenuOfContentButtons(dynAddRmButton::btnMode mode){
+void MainWindow::adjustMenuOfContentButtons(dynButton::btnMode const mode){
     qDebug() << "start: adjustMenuOfContentButtons";
-    if(mode == dynAddRmButton::btnModeADD){
-        for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-            this->contentBtnList.at(i)->disableDeleteAllMarked();
+    if(mode == dynButton::btnModeADD){
+        for(auto &btn : this->contentBtnList){
+            btn->disableDeleteAllMarked();
         }
-    }else if(mode == dynAddRmButton::btnModeRM){
-        for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-            this->contentBtnList.at(i)->enableDeleteAllMarked();
+    }else if(mode == dynButton::btnModeRM){
+        for(auto &btn : this->contentBtnList){
+            btn->enableDeleteAllMarked();
         }
     }
 }
 
-void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
+//slot
+void MainWindow::adjustButtons(dynButton::btnMode const mode){
     qDebug() << "start: adjustButtons";
     this->adjustMenuOfContentButtons(mode);
-    if(mode == dynAddRmButton::btnModeADD){
+    if(mode == dynButton::btnModeADD){
         qDebug() << "ADD (in adjustButtons)";
         this->ui->textInputField->show();
         this->ui->buttonSearch->show();
         this->ui->buttonAdd->show();
         this->unmarkAllBtn.hide();
-    }else if(mode == dynAddRmButton::btnModeRM){
+    }else if(mode == dynButton::btnModeRM){
         qDebug() << "RM (in adjustButtons)";
         this->ui->textInputField->hide();
         this->ui->buttonSearch->hide();
         this->ui->buttonAdd->hide();
         this->unmarkAllBtn.show();
-    }else if(mode == dynAddRmButton::btnModeDISABLED){
+    }else if(mode == dynButton::btnModeDISABLED){
         qDebug() << "DISABLED (in adjustButtons)";
         this->ui->textInputField->hide();
         this->ui->buttonSearch->hide();
@@ -1207,25 +1210,26 @@ void MainWindow::adjustButtons(dynAddRmButton::btnMode mode){
     qDebug() << "end: adjustButtons";
 }
 
+//slot
 void MainWindow::restoreLastUnfocused(){
     qDebug() << "restoreLastUnfocused!";
     contentButton::restoreLastUnfocusedButtonToFocusedButton();
 }
 
-void MainWindow::enableMoveButtonForAllButtons(){
-    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-        this->contentBtnList.at(i)->enableMoveButton();
+void MainWindow::enablePasteForAllButtons(){
+    for(auto &btn : this->contentBtnList){
+        btn->enablePasteContent();
     }
 }
 
 void MainWindow::disablePasteForAllButtons(){
-    for(qsizetype i = 0; i < this->contentBtnList.count(); ++i){
-        this->contentBtnList.at(i)->disablePasteContent();
+    for(auto &btn : this->contentBtnList){
+        btn->disablePasteContent();
     }
 }
 
+//slot
 void MainWindow::processClipBoard(){
-    qDebug() << "start: process ClipBoard";
     const QMimeData *mimeData = clipboard->mimeData();
     if(mimeData->hasText()){
         qDebug() << "Clipboard data is text.";
