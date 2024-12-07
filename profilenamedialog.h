@@ -22,6 +22,7 @@ public:
     profileNameDialog (const profileNameDialog&) = delete;
     profileNameDialog& operator= (const profileNameDialog&) = delete;
     void setPtrToVisibleProfileList(QListWidget const * const listWidget);
+    static int constexpr maxProfileNameLength = 50;
 
 signals:
     void profileNameEdited(QString const &oldName, QString const &newName);

@@ -64,6 +64,7 @@ private:
 
     void initProfMenu();
     void initConnects();
+    void cleanUpZombieProfiles();
 
     void constructVisibleListFromInternal();
     void saveVisibleListToInternal();

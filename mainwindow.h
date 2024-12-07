@@ -48,6 +48,7 @@ private slots:
     void processActionForSearchButton();
     void processTextFieldChange(QString const &text);
     void processSingleButtonDeletion(qsizetype const indexOfSender);
+    void clearLastUnfocusedButton();
     void restoreLastUnfocused();
     void processClipBoard();
     void processRemoveAllMarkedButtons();

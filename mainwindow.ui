@@ -193,6 +193,14 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>buttonInfo</tabstop>
+  <tabstop>buttonProfile</tabstop>
+  <tabstop>textInputField</tabstop>
+  <tabstop>buttonSearch</tabstop>
+  <tabstop>buttonAdd</tabstop>
+  <tabstop>scrollArea</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

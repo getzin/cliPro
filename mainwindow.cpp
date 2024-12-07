@@ -12,6 +12,7 @@
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QMimeData>
+#include <QDir>
 
 #include "apputils.h"
 
@@ -19,8 +20,8 @@ const QClipboard *MainWindow::clipboard = nullptr;
 
 MainWindow::~MainWindow()
 {
-    this->saveAppSettings();
     this->saveCurrentButtonsAsJson();
+    this->saveAppSettings();
     delete this->ui;
 }
 
@@ -40,6 +41,8 @@ MainWindow::MainWindow(QWidget * const parent)
     this->initScrollGrid();
     this->initConnects();
     this->initClipBoard();
+    this->fixTabOrder();
+    this->ui->buttonProfile->setFocus();
 }
 
 void MainWindow::initMainWindow(){
@@ -47,6 +50,10 @@ void MainWindow::initMainWindow(){
     this->setWindowTitle(appSettings::appName);
     this->setFocusPolicy(Qt::StrongFocus); //without this, arrow keys do not work
     this->setMinimumSize(this->minWindowSize_w, this->minWindowSize_h);
+
+    //these two are in the way of proper tab focus functionality
+    this->ui->scrollArea->setFocusPolicy(Qt::NoFocus);
+    this->setFocusPolicy(Qt::NoFocus); //"this == mainWindow"
 }
 
 void MainWindow::initUIButtons(){
@@ -85,7 +92,6 @@ void MainWindow::initScrollGrid(){
     this->loadJsonOrCreateDefault(); //needs to happen before adding the dynBtn
     this->addDynBtnAtEndOfContentButtons();
     this->updateProfileSettingsValidity();
-    this->fixTabOrder();
 
     if(this->dynBtn.getCurrBtnMode() == dynButton::btnModeDISABLED){
         adjustButtons(dynButton::btnModeDISABLED);
@@ -96,6 +102,7 @@ void MainWindow::initConnects(){
     connect(&(this->dynBtn), SIGNAL(released()), this, SLOT(processDynBtnMainAction()));
     connect(&(this->dynBtn), SIGNAL(keyPressOnDynBtn(int)), this, SLOT(processDynBtnKeyPress(int)));
     connect(&(this->dynBtn), SIGNAL(mainWindowButtonsNeedSwitch(dynButton::btnMode)), this, SLOT(adjustButtons(dynButton::btnMode)));
+    connect(&(this->dynBtn), SIGNAL(clearLastUnfocusedButton()), this, SLOT(clearLastUnfocusedButton()));
 
     connect(&(this->profMenu), SIGNAL(selProfileHasChanged(QString,bool)), this, SLOT(updateButtonsForProfileChange(QString,bool)));
     connect(&(this->profMenu), SIGNAL(newProfileCreated(QString)), this, SLOT(createDefaultJsonForNewProfile(QString)));
@@ -138,7 +145,7 @@ void MainWindow::loadJsonOrCreateDefault(){
 
         //check if file even exists
         if(!jsonFileExists){
-            qDebug() << "jsonFile of path " << this->pathToFileForSelectedProfile + "does not exist";
+            qDebug() << "jsonFile of path " << this->pathToFileForSelectedProfile << " | does not exist";
             //create default file if none exist
             this->saveDefaultJsonForProfile(pathToFileForSelectedProfile);
         }else{
@@ -150,6 +157,7 @@ void MainWindow::loadJsonOrCreateDefault(){
 }
 
 void MainWindow::fixTabOrder(){
+    QWidget::setTabOrder(&(this->dynBtn), this->ui->buttonProfile);
     QWidget::setTabOrder(this->ui->buttonProfile, this->ui->textInputField);
     QWidget::setTabOrder(this->ui->textInputField, this->ui->buttonSearch);
     QWidget::setTabOrder(this->ui->buttonSearch, this->ui->buttonAdd);
@@ -165,6 +173,7 @@ void MainWindow::fixTabOrder(){
     }else{
         QWidget::setTabOrder(&(this->unmarkAllBtn), &(this->dynBtn));
     }
+    QWidget::setTabOrder(&(this->dynBtn), this->ui->buttonProfile);
 }
 
 void MainWindow::loadAppSettings(){
@@ -1063,12 +1072,15 @@ void MainWindow::setDisplayedProfileName(QString const &name){
 //slot
 void MainWindow::updateButtonsForProfileChange(QString const &profileName, bool const currentActiveProfHasBeenDeleted){
     qDebug() << "start: updateButtonsForProfileChange";
-    qDebug() << "received name: " << profileName;
-    qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
+    qDebug() << "(MW) received name: " << profileName;
+    qDebug() << "(MW) currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
     if(profileName == this->currSelectedProfileName && currentActiveProfHasBeenDeleted == false){
         qDebug() << "Profile is already the current selected one, no change, do nothing.";
         if(profileName == ""){
             this->updatePlaceholderProfileNameText();
+            this->ui->buttonProfile->setFocus();
+        }else{
+            this->restoreLastUnfocused();
         }
     }else{
         if(this->profileSettingsValid){
@@ -1092,9 +1104,9 @@ void MainWindow::updateButtonsForProfileChange(QString const &profileName, bool 
         //ToDo what do when this part fails?
         this->loadJsonOrCreateDefault();
         this->rebuildGrid();
-
         qDebug() << "(update buttons) count of contentBtnList: " << this->contentBtnList.count();
         qDebug() << "(update buttons) count of scrollGrid items: " << this->ui->scrollGrid->count();
+        this->ui->buttonProfile->setFocus();
     }
 
     if(this->searchActive){
@@ -1103,8 +1115,6 @@ void MainWindow::updateButtonsForProfileChange(QString const &profileName, bool 
         this->setSearchInactive();
     }
     this->updateProfileSettingsValidity();
-    this->ui->buttonProfile->setFocus();
-    // this->ui->scrollArea->scroll(0,0); //scroll to top
     qDebug() << "end: updateButtonsForProfileChange";
 }
 
@@ -1211,8 +1221,12 @@ void MainWindow::adjustButtons(dynButton::btnMode const mode){
 }
 
 //slot
+void MainWindow::clearLastUnfocusedButton(){
+    contentButton::clearLastUnfocusedButton();
+}
+
+//slot
 void MainWindow::restoreLastUnfocused(){
-    qDebug() << "restoreLastUnfocused!";
     contentButton::restoreLastUnfocusedButtonToFocusedButton();
 }
 

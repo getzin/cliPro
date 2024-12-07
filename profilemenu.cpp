@@ -13,6 +13,7 @@ QString const profileMenu::profilesFolderName = "/profiles/";
 
 profileMenu::~profileMenu()
 {
+    this->cleanUpZombieProfiles();
     delete this->ui;
 }
 
@@ -59,6 +60,30 @@ void profileMenu::initConnects(){
     connect(&(this->nameDialog), SIGNAL(createNewProfile(QString)), this, SLOT(handleNewProfileCreation(QString)));
 
     connect(this->ui->visibleProfileList, SIGNAL(itemSelectionChanged()), this, SLOT(handleSelectedProfileChanged()));
+}
+
+void profileMenu::cleanUpZombieProfiles(){
+    //this function deletes all .json files in the /profile/ folder that are
+    //not listed in profiles/profiles_list of /settings/cliProSettings.ini file
+    //... just in case a json file was not properly deleted (should never happen)
+    qDebug() << "start: cleanUpZombieProfiles";
+    QString profilesFolderPath = QDir::currentPath() + profileMenu::profilesFolderName;
+    QDir profilesFolder(profilesFolderPath);
+    if(profilesFolder.exists()){
+        QStringList profileJsons = profilesFolder.entryList({"*.json"}, QDir::Files);
+        foreach(QString profile, profileJsons){
+            profile.remove(".json"); //remove file ending before checking if it is in list
+            if(this->internalProfilesList.contains(profile)){
+                qDebug() << "profile: " << profile << ".json is in list! (keep it / do nothing)";
+            }else{
+                qDebug() << "profile: " << profile << ".json is NOT in list (delete the json file!)";
+                QString profileJsonFilePath = constructFilePathForProfileJson(profile);
+                bool deleteSuccess = QFile::remove(profileJsonFilePath);
+                qDebug() << "deleteSuccess: " << deleteSuccess;
+            }
+        }
+    }
+    qDebug() << "end: cleanUpZombieProfiles";
 }
 
 void profileMenu::constructVisibleListFromInternal(){
@@ -131,6 +156,16 @@ void profileMenu::loadProfiles(){
     settings.beginGroup(appSettings::settingsGroupProfiles);
     this->internalProfilesList.append(settings.value(appSettings::settingsValProfilesList).toStringList()); //read "profiles" (list of string)
 
+    //remove all duplicates and names longer than maxProfileNameLength (50)
+    //such names should never have gotten into the list in the first place,
+    //but the user could manually edit the .ini file to force such a faulty file
+    this->internalProfilesList.removeDuplicates();
+    for (int i = this->internalProfilesList.length() - 1; i >= 0 ; --i)  {
+        if(this->internalProfilesList.at(i).length() > profileNameDialog::maxProfileNameLength){
+            qDebug() << "name is too long! Ignore: " << this->internalProfilesList.at(i);
+            this->internalProfilesList.removeAt(i);
+        }
+    }
     QString tmpCurrSelIdVal = settings.value(appSettings::settingsValCurrProfileID).toString();
 
     bool isOK = false;
@@ -281,7 +316,7 @@ void profileMenu::commonCloseActions(){
 
 //slot
 void profileMenu::cancelButtonPressed(){
-    this->commonCloseActions();
+    emit this->rejected();
 }
 
 //slot
@@ -370,8 +405,8 @@ void profileMenu::saveButtonPressed(){
     // 3) rename files to new names
     this->processProfilesActions();
 
-    qDebug() << "currentActiveProfile: " << this->currentActiveProfile;
-    qDebug() << "currentActiveProfHasBeenDeleted: " << this->currentActiveProfHasBeenDeleted;
+    qDebug() << "(profMenu) currentActiveProfile: " << this->currentActiveProfile;
+    qDebug() << "(profMenu) currentActiveProfHasBeenDeleted: " << this->currentActiveProfHasBeenDeleted;
 
     if(indexIsInBounds(this->currentActiveProfile, this->internalProfilesList.count())){
         qDebug() << "currentActiveProfile is valid";
@@ -460,9 +495,9 @@ void profileMenu::setEditDelDisabled(){
 void profileMenu::fixTabOrder(){
     QWidget::setTabOrder(this->ui->btnEdit, this->ui->btnNew);
     QWidget::setTabOrder(this->ui->btnNew, this->ui->btnDelete);
-    QWidget::setTabOrder(this->ui->btnDelete, this->ui->visibleProfileList);
-    QWidget::setTabOrder(this->ui->visibleProfileList, this->ui->btnSave);
-    QWidget::setTabOrder(this->ui->btnSave, this->ui->btnCancel);
+    QWidget::setTabOrder(this->ui->btnDelete, this->ui->btnCancel);
+    QWidget::setTabOrder(this->ui->btnCancel, this->ui->visibleProfileList);
+
 }
 
 void profileMenu::checkProfilesCountAndSetEditDel(){

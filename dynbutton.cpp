@@ -76,3 +76,8 @@ dynButton::btnMode dynButton::getCurrBtnMode() const{
 void dynButton::keyPressEvent(QKeyEvent *const event){
     emit this->keyPressOnDynBtn(event->key());
 }
+
+void dynButton::focusInEvent(QFocusEvent *const event){
+    QPushButton::focusInEvent(event);
+    emit this->clearLastUnfocusedButton();
+}

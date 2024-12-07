@@ -22,12 +22,14 @@ public:
 signals:
     void mainWindowButtonsNeedSwitch(dynButton::btnMode const mode);
     void keyPressOnDynBtn(int const key);
+    void clearLastUnfocusedButton();
 
 public slots:
     void setMode(dynButton::btnMode const mode);
 
 protected:
     void keyPressEvent(QKeyEvent *const event) override;
+    void focusInEvent(QFocusEvent *const event) override;
 
 private:
     void init();

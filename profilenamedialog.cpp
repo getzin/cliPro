@@ -158,32 +158,41 @@ bool profileNameDialog::checkNameIsNotTaken(QString const &nameTocheck) const{
 void profileNameDialog::processOKbuttonPressed(){
     QString userInput = this->ui->nameInputField->text();
     if((!userInput.isEmpty())){
-        if(this->checkStringIsAlphanumeric(userInput)){
-            //check for possible duplicate (not allowed) before adding the new string
-            if(this->checkNameIsNotTaken(userInput)){
-                qDebug() << "Input OK";
-                if(this->currMode == dialogModeEdit){
-                    emit this->profileNameEdited(currEditName, userInput);
+        if(userInput.length() <= this->maxProfileNameLength){
+            if(this->checkStringIsAlphanumeric(userInput)){
+                //check for possible duplicate (not allowed) before adding the new string
+                if(this->checkNameIsNotTaken(userInput)){
+                    qDebug() << "Input (" << userInput << ") OK";
+                    if(this->currMode == dialogModeEdit){
+                        emit this->profileNameEdited(currEditName, userInput);
+                    }else{
+                        emit this->createNewProfile(userInput);
+                    }
                 }else{
-                    emit this->createNewProfile(userInput);
+                    QString tmpErrorStr;
+                    tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list!"
+                                                                       "<br>Please choose another name.");
+                    timedPopUp(this, defaultPopUpTimer, "Error: Duplicate name", tmpErrorStr);
+                    qDebug() << "Input (" << userInput << ") is a duplicate!";
                 }
             }else{
                 QString tmpErrorStr;
-                tmpErrorStr.append("<b>").append(userInput).append("</b> is already in the list!"
-                                                                   "<br>Please choose another name.");
-                timedPopUp(this, defaultPopUpTimer, "Error: Duplicate name", tmpErrorStr);
-                qDebug() << "Input (" << userInput << ") is a duplicate!";
+                tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string."
+                                                                   "<br>Only alphanumeric characters, _ and - are allowed."
+                                                                   "<br>(No spaces, $, !, ?, ...)");
+                timedPopUp(this, defaultPopUpTimer, "Error: Invalid string", tmpErrorStr);
+                qDebug() << "Input (" << userInput << ") not OK.";
             }
         }else{
             QString tmpErrorStr;
-            tmpErrorStr.append("<b>").append(userInput).append("</b> is not a valid string."
-                                                               "<br>Only alphanumeric characters, _ and - are allowed."
-                                                               "<br>(No spaces, $, !, ?, ...)");
-            timedPopUp(this, defaultPopUpTimer, "Error: Invalid string", tmpErrorStr);
-            qDebug() << "Input not OK";
+            tmpErrorStr.append("<b>").append(userInput).append("</b> is too long."
+                                                               "<br>Maximum number of allowed characters: "
+                                                               + QString::number(this->maxProfileNameLength));
+            timedPopUp(this, defaultPopUpTimer, "Error: Name too long", tmpErrorStr);
+            qDebug() << "Input (" << userInput << ") is too long! (Max: " << this->maxProfileNameLength << ")";
         }
     }else{
-        timedPopUp(this, defaultPopUpTimer, "ERROR", "Empty name is not allowed.");
-        qDebug() << "Input is empty!";
+        timedPopUp(this, defaultPopUpTimer, "Error: Empty name", "Empty profile name is not allowed.");
+        qDebug() << "Input is empty.";
     }
 }
