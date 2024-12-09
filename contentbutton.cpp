@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <QTextDocument>
 #include <QInputDialog>
+#include <QApplication>
 
 #include "apputils.h"
 

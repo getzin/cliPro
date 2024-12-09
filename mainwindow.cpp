@@ -12,7 +12,6 @@
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QMimeData>
-#include <QDir>
 
 #include "apputils.h"
 
