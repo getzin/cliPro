@@ -327,7 +327,7 @@ void profileMenu::handleRejectedSignal(){
 
 //static
 void profileMenu::createProfilesFolderIfNotExist(){
-    QString profilesFolderPath = QDir::currentPath() + profileMenu::profilesFolderName;
+    QString profilesFolderPath = QDir::currentPath() + appSettings::appFolder + profileMenu::profilesFolderName;
     if(!(QDir(profilesFolderPath).exists())){
         QDir().mkdir(profilesFolderPath);
         //ToDo what do if this fails?
@@ -336,7 +336,7 @@ void profileMenu::createProfilesFolderIfNotExist(){
 
 //static
 QString profileMenu::constructFilePathForProfileJson(QString const &profileName){
-    return (QDir::currentPath() + profileMenu::profilesFolderName + (profileName)) + ".json";
+    return (QDir::currentPath() + appSettings::appFolder + profileMenu::profilesFolderName + profileName + ".json");
 }
 
 void profileMenu::renameProfilesJson(QString const &oldName, QString const &newName){

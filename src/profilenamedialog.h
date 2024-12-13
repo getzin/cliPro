@@ -40,7 +40,9 @@ private slots:
     void processOKbuttonPressed();
 
 private:
-    void init();
+    void initIcons();
+    void initWindow();
+    void initConnects();
     void start();
     bool checkStringIsAlphanumeric(QString const &strToCheck) const;
     bool checkNameIsNotTaken(QString const &nameTocheck) const;

@@ -2,6 +2,7 @@
 #include "ui_profilenamedialog.h"
 
 #include <QKeyEvent>
+#include <QDir>
 
 #include "apputils.h"
 
@@ -14,14 +15,34 @@ profileNameDialog::profileNameDialog(QWidget * const parent)
     : QDialog(parent)
     , ui(new Ui::profileNameDialog)
 {
-    this->init();
+    this->initWindow(); //needs to go first for ui set up
+    this->initIcons();
+    this->initConnects();
 }
 
-void profileNameDialog::init(){
+void profileNameDialog::initWindow(){
     this->ui->setupUi(this);
     this->setModal(true);
     this->setFixedSize(this->windowSize_w, this->WindowSize_h);
+}
 
+void profileNameDialog::initIcons(){
+    //set buttons icons to custom images, if they have not been set yet
+    QString iconsFolderPath = QDir::currentPath() + "/../../icons/";
+    qDebug() << "iconsFolderPath: " << iconsFolderPath;
+    qDebug() << "(isNull?) button OK icon: " << this->ui->buttonOK->icon().isNull();
+    qDebug() << "(isNull?) button Cancel icon: " << this->ui->buttonCancel->icon().isNull();
+    if(this->ui->buttonOK->icon().isNull()){
+        QString buttonOKStr = iconsFolderPath + "icon_check32.png";
+        if(QFile::exists(buttonOKStr)){ this->ui->buttonOK->setIcon(QIcon(buttonOKStr)); }
+    }
+    if(this->ui->buttonCancel->icon().isNull()){
+        QString buttonCancelStr = iconsFolderPath + "icon_cross32.png";
+        if(QFile::exists(buttonCancelStr)){ this->ui->buttonCancel->setIcon(QIcon(buttonCancelStr)); }
+    }
+}
+
+void profileNameDialog::initConnects(){
     connect(this->ui->buttonOK, SIGNAL(clicked()), this, SLOT(processOKbuttonPressed()));
     connect(this->ui->buttonCancel, SIGNAL(clicked()), this, SLOT(close()));
     connect(this->ui->nameInputField, SIGNAL(textEdited(QString)), this, SLOT(adjustOKButton()));

@@ -6,8 +6,9 @@
 
 namespace appSettings{
 inline QString const appName = "cliProV1";
-inline QString const appAuthor = "Andreas Getzin";;
-inline QString const settingsFile = "settings/cliProSettings.ini";
+inline QString const appAuthor = "Andreas Getzin";
+inline QString const appFolder = "/cliProApp";
+inline QString const settingsFile = "cliProApp/settings/cliProSettings.ini";
 
 inline QString const settingsGroupMainWindow = "mainWindow";
 inline QString const settingsValMWWidth = "width";

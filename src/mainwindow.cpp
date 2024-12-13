@@ -12,6 +12,7 @@
 #include <QKeyEvent>
 #include <QClipboard>
 #include <QMimeData>
+#include <QDir>
 
 #include "apputils.h"
 
@@ -33,6 +34,7 @@ MainWindow::MainWindow(QWidget * const parent)
       moveBtnMenu(this),
       unmarkAllBtn(this)
 {
+    this->initAppFolder();
     this->initMainWindow();
     this->initUIButtons();
     this->loadAppSettings();
@@ -42,6 +44,20 @@ MainWindow::MainWindow(QWidget * const parent)
     this->initClipBoard();
     this->fixTabOrder();
     this->ui->buttonProfile->setFocus();
+}
+
+void MainWindow::initAppFolder(){
+    QString appFolderPath = QDir::currentPath() + appSettings::appFolder;
+    qDebug() << "appFolderPath: " << appFolderPath;
+    if(!(QDir(appFolderPath).exists())){
+        qDebug() << "app folder does not exist.";
+        bool OK = QDir().mkdir(appFolderPath);
+        if(!OK){
+            qDebug() << "Unable to create app folder. Exit.";
+            //if we can't create this, the app will not be able load or save any changes, might as well exit
+            exit(EXIT_FAILURE);
+        }
+    }
 }
 
 void MainWindow::initMainWindow(){
@@ -68,6 +84,25 @@ void MainWindow::initUIButtons(){
     //will become "enabled" as soon as there is input in the input field
     this->ui->buttonAdd->setDisabled(true);
     this->ui->buttonSearch->setDisabled(true);
+
+    //set buttons icons to custom images, if they have not been set yet
+    QString iconsFolderPath = QDir::currentPath() + "/../../icons/";
+    qDebug() << "iconsFolderPath: " << iconsFolderPath;
+    qDebug() << "(isNull?) button Info icon: " << this->ui->buttonInfo->icon().isNull();
+    qDebug() << "(isNull?) button Search icon: " << this->ui->buttonSearch->icon().isNull();
+    qDebug() << "(isNull?) button Add icon: " << this->ui->buttonAdd->icon().isNull();
+    if(this->ui->buttonInfo->icon().isNull()){
+        QString iconInfoStr = iconsFolderPath + "icon_info32.png";
+        if(QFile::exists(iconInfoStr)){ this->ui->buttonInfo->setIcon(QIcon(iconInfoStr)); }
+    }
+    if(this->ui->buttonSearch->icon().isNull()){
+        QString iconSearchStr = iconsFolderPath + "icon_search32.png";
+        if(QFile::exists(iconSearchStr)){ this->ui->buttonSearch->setIcon(QIcon(iconSearchStr)); }
+    }
+    if(this->ui->buttonAdd->icon().isNull()){
+        QString iconAddStr = iconsFolderPath + "icon_add32.png";
+        if(QFile::exists(iconAddStr)){ this->ui->buttonAdd->setIcon(QIcon(iconAddStr)); }
+    }
 }
 
 void MainWindow::setUpUnmarkAllBtn(){

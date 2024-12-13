@@ -9,33 +9,33 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    apputils.cpp \
-    buttonedit.cpp \
-    contentbutton.cpp \
-    dynbutton.cpp \
-    main.cpp \
-    mainwindow.cpp \
-    movebutton.cpp \
-    profilemenu.cpp \
-    profilenamedialog.cpp
+    src/apputils.cpp \
+    src/buttonedit.cpp \
+    src/contentbutton.cpp \
+    src/dynbutton.cpp \
+    src/main.cpp \
+    src/mainwindow.cpp \
+    src/movebutton.cpp \
+    src/profilemenu.cpp \
+    src/profilenamedialog.cpp
 
 HEADERS += \
-    apputils.h \
-    buttonedit.h \
-    contentbtncount.h \
-    contentbutton.h \
-    dynbutton.h \
-    mainwindow.h \
-    movebutton.h \
-    profilemenu.h \
-    profilenamedialog.h
+    src/apputils.h \
+    src/buttonedit.h \
+    src/contentbtncount.h \
+    src/contentbutton.h \
+    src/dynbutton.h \
+    src/mainwindow.h \
+    src/movebutton.h \
+    src/profilemenu.h \
+    src/profilenamedialog.h
 
 FORMS += \
-    buttonedit.ui \
-    mainwindow.ui \
-    movebutton.ui \
-    profilemenu.ui \
-    profilenamedialog.ui
+    src/buttonedit.ui \
+    src/mainwindow.ui \
+    src/movebutton.ui \
+    src/profilemenu.ui \
+    src/profilenamedialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
