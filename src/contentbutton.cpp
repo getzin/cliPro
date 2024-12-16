@@ -540,12 +540,16 @@ void contentButton::setTitle(QString const &newTitle){
             if(newTitle.length() <= this->maxTitleLengthGeneral){
                 this->title = newTitle;
 
+                QString titleWithHtml;
+                titleWithHtml.append("<body>");
                 //we clip very long titles
                 if(this->title.length() < this->maxTitleLengthForDisplaying){
-                    this->titleDisplayed = this->title;
+                    titleWithHtml.append(this->title);
                 }else{
-                    this->titleDisplayed = this->title.first(this->maxTitleLengthForDisplaying).append("...");
+                    titleWithHtml.append(this->title.first(this->maxTitleLengthForDisplaying).append("..."));
                 }
+                titleWithHtml.append("</body>");
+                this->titleDisplayed = titleWithHtml;
 
                 this->addOrEditTitleAction.setText(this->textForEditTitleAct);
                 this->removeTitleAction.setVisible(true);
@@ -582,13 +586,17 @@ void contentButton::setContent(QString const &newContent){
             this->content = newContent;
             this->enableCopyCutRemoveContent();
 
-            //for very long content (many characters or many lines), display "..."
+            QString contentWithHtml;
+            contentWithHtml.append("<body>");
+            //for very long content (many characters or many lines), display "..." instead
             if(this->content.count('\n') > this->maxContentLinesForDisplaying
                 || this->content.length() > this->maxContentLengthForDisplaying){
-                this->contentDisplayed = "...";
+                contentWithHtml.append("...");
             }else{
-                this->contentDisplayed = this->content;
+                contentWithHtml.append(this->content);
             }
+            contentWithHtml.append("</body>");
+            this->contentDisplayed = contentWithHtml;
         }else{
             timedPopUp(this, defaultPopUpTimer, "Too many characters", "The maximum amount of characters for content is 100,000.");
         }
@@ -676,13 +684,14 @@ void contentButton::focusOutEvent(QFocusEvent * const event){
 void contentButton::paintEvent(QPaintEvent * const event){
 
     QPushButton::paintEvent(event);
-
     QPainter combinedImage(this);
 
-    QTextDocument docTitle(this->titleDisplayed);
+    QTextDocument docTitle;
     QTextOption optTitle(Qt::AlignHCenter);
-    docTitle.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
     docTitle.setDefaultTextOption(optTitle);
+    docTitle.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
+    docTitle.setDefaultStyleSheet("body { color : black; }");
+    docTitle.setHtml(this->titleDisplayed);
     docTitle.adjustSize();
 
     if(docTitle.size().width() < this->width()){
@@ -701,7 +710,7 @@ void contentButton::paintEvent(QPaintEvent * const event){
     pixmapTitle.fill(Qt::transparent);
 
     QPainter paintTitle(&pixmapTitle);
-    paintTitle.setBrush(Qt::black);
+    paintTitle.setBrush(Qt::black); //superfluous?
     docTitle.drawContents(&paintTitle, pixmapTitle.rect());
     QPixmap scaledPixmapTitle(pixmapTitle);
     /*
@@ -721,14 +730,16 @@ void contentButton::paintEvent(QPaintEvent * const event){
     QPoint pointContent(0, dividingHeight);
     QSize sizeContent(this->width() - 1, remainingHeight); //ToDo check the "-1" of width
 
-    QTextDocument docContent(this->contentDisplayed);
+    QTextDocument docContent;
     docContent.setDefaultFont(QFont("Times", 12, QFont::Medium));
+    docContent.setDefaultStyleSheet("body { color : black; }");
+    docContent.setHtml(this->contentDisplayed);
     docTitle.adjustSize();
 
     QPixmap pixmapContent(docContent.size().width(), docContent.size().height());
     pixmapContent.fill(Qt::transparent);
     QPainter paintContent(&pixmapContent);
-    paintContent.setBrush(Qt::black);
+    paintContent.setBrush(Qt::black); //superfluous?
     docContent.drawContents(&paintContent, pixmapContent.rect());
 
     if(pixmapContent.rect().height() > remainingHeight){
