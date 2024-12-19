@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/img">
+        <file alias="add.png">icons/icon_add32.png</file>
+        <file alias="check.png">icons/icon_check32.png</file>
+        <file alias="cross.png">icons/icon_cross32.png</file>
+        <file alias="info.png">icons/icon_info32.png</file>
+        <file alias="search.png">icons/icon_search32.png</file>
+    </qresource>
+</RCC>

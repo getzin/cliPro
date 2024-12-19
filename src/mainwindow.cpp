@@ -86,21 +86,19 @@ void MainWindow::initUIButtons(){
     this->ui->buttonSearch->setDisabled(true);
 
     //set buttons icons to custom images, if they have not been set yet
-    QString iconsFolderPath = QDir::currentPath() + "/../../icons/";
-    qDebug() << "iconsFolderPath: " << iconsFolderPath;
-    qDebug() << "(isNull?) button Info icon: " << this->ui->buttonInfo->icon().isNull();
-    qDebug() << "(isNull?) button Search icon: " << this->ui->buttonSearch->icon().isNull();
-    qDebug() << "(isNull?) button Add icon: " << this->ui->buttonAdd->icon().isNull();
     if(this->ui->buttonInfo->icon().isNull()){
-        QString iconInfoStr = iconsFolderPath + "icon_info32.png";
+        qDebug() << "buttonInfo icon is NULL";
+        QString iconInfoStr = ":/img/info.png";
         if(QFile::exists(iconInfoStr)){ this->ui->buttonInfo->setIcon(QIcon(iconInfoStr)); }
     }
     if(this->ui->buttonSearch->icon().isNull()){
-        QString iconSearchStr = iconsFolderPath + "icon_search32.png";
+        qDebug() << "buttonSearch icon is NULL";
+        QString iconSearchStr = ":/img/search.png";
         if(QFile::exists(iconSearchStr)){ this->ui->buttonSearch->setIcon(QIcon(iconSearchStr)); }
     }
     if(this->ui->buttonAdd->icon().isNull()){
-        QString iconAddStr = iconsFolderPath + "icon_add32.png";
+        qDebug() << "buttonAdd icon is NULL";
+        QString iconAddStr = ":/img/add.png";
         if(QFile::exists(iconAddStr)){ this->ui->buttonAdd->setIcon(QIcon(iconAddStr)); }
     }
 }

@@ -5,7 +5,7 @@
 #include <QString>
 
 namespace appSettings{
-inline QString const appName = "cliProV1";
+inline QString const appName = "cliPro";
 inline QString const appAuthor = "Andreas Getzin";
 inline QString const appFolder = "/cliProApp";
 inline QString const settingsFile = "cliProApp/settings/cliProSettings.ini";

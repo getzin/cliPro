@@ -28,16 +28,14 @@ void profileNameDialog::initWindow(){
 
 void profileNameDialog::initIcons(){
     //set buttons icons to custom images, if they have not been set yet
-    QString iconsFolderPath = QDir::currentPath() + "/../../icons/";
-    qDebug() << "iconsFolderPath: " << iconsFolderPath;
-    qDebug() << "(isNull?) button OK icon: " << this->ui->buttonOK->icon().isNull();
-    qDebug() << "(isNull?) button Cancel icon: " << this->ui->buttonCancel->icon().isNull();
     if(this->ui->buttonOK->icon().isNull()){
-        QString buttonOKStr = iconsFolderPath + "icon_check32.png";
+        qDebug() << "buttonOK icon is NULL";
+        QString buttonOKStr = ":/img/check.png";
         if(QFile::exists(buttonOKStr)){ this->ui->buttonOK->setIcon(QIcon(buttonOKStr)); }
     }
     if(this->ui->buttonCancel->icon().isNull()){
-        QString buttonCancelStr = iconsFolderPath + "icon_cross32.png";
+        qDebug() << "buttonCancel icon is NULL";
+        QString buttonCancelStr = ":/img/cross.png";
         if(QFile::exists(buttonCancelStr)){ this->ui->buttonCancel->setIcon(QIcon(buttonCancelStr)); }
     }
 }
