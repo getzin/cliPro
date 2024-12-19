@@ -44,3 +44,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 RESOURCES += \
     resources.qrc
+
+#DESTDIR=bin #Target file directory
+OBJECTS_DIR=obj #Intermediate object files directory
+MOC_DIR=moc #Intermediate moc files directory
+UI_DIR=ui #Intermediate ui files directory
+RCC_DIR=rcc #Intermediate resource files directory
