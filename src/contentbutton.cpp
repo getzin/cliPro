@@ -548,6 +548,7 @@ void contentButton::setTitle(QString const &newTitle){
                 }else{
                     titleWithHtml.append(this->title.first(this->maxTitleLengthForDisplaying).append("..."));
                 }
+                titleWithHtml.replace("\n",""); //remove linebreaks
                 titleWithHtml.append("</body>");
                 this->titleDisplayed = titleWithHtml;
 
@@ -595,6 +596,7 @@ void contentButton::setContent(QString const &newContent){
             }else{
                 contentWithHtml.append(this->content);
             }
+            contentWithHtml.replace("\n","<br>"); //replace regular linebreaks with html style linebreaks
             contentWithHtml.append("</body>");
             this->contentDisplayed = contentWithHtml;
         }else{

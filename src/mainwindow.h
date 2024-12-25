@@ -71,7 +71,7 @@ private:
     void saveDefaultJsonForProfile(QString const &profileName);
     void addDynBtnAtEndOfContentButtons();
     void createAndAddNewButton(qsizetype const row, qsizetype const col, QString const &title, QString const &content);
-    void processAddANewButton(QString const &defaultText);
+    void processAddANewButton(QString const &text);
     void processMinusKey();
     void processEscapeKey();
     void processRemainingKeys(int const key);

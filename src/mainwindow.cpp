@@ -287,13 +287,7 @@ void MainWindow::createAndAddNewButton(qsizetype const row, qsizetype const col,
 
     qDebug() << "insert at: " << " (" << row << "," << col << ")";
     contentButton *newContentBtn = new contentButton(this);
-    if(title.contains('\n')){
-        QString titleNoLinebreaks(title);
-        titleNoLinebreaks.remove('\n');
-        newContentBtn->setTitle(titleNoLinebreaks);
-    }else{
-        newContentBtn->setTitle(title);
-    }
+    newContentBtn->setTitle(title);
     newContentBtn->setContent(content);
     if(this->clipboard->text().length() > 0){
         newContentBtn->enablePasteContent();
@@ -394,12 +388,12 @@ void MainWindow::loadButtonsFromJson(){
     this->updateIndexOfAllButtons();
 }
 
-void MainWindow::processAddANewButton(QString const &defaultText){
+void MainWindow::processAddANewButton(QString const &text){
     qDebug() << "start: processAddANewButton";
     this->ui->scrollGrid->removeWidget(&(this->dynBtn));
     qsizetype row = this->ui->scrollGrid->count() / this->maxItemsPerRow;
     qsizetype col = this->ui->scrollGrid->count() % this->maxItemsPerRow;
-    this->createAndAddNewButton(row,col,"",defaultText);
+    this->createAndAddNewButton(row,col,"",text);
     this->addDynBtnAtEndOfContentButtons();
 
     qDebug() << "(post) count: "

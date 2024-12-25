@@ -46,8 +46,11 @@ void buttonEdit::save(bool const closeAtEnd){
         qDebug() << "currently not editing a button.";
         this->close();
     }else{
-        this->currentlyEditing->setTitle(this->ui->editTitle->toPlainText().remove('\n')); //ToDo Optimize
-        this->currentlyEditing->setContent(this->ui->editContent->toPlainText().remove('\n')); //ToDo Optimize
+        QString title = this->ui->editTitle->toPlainText();
+        if(title.contains('\n')){
+            title.remove('\n');
+        }
+        this->currentlyEditing->setContent(this->ui->editContent->toPlainText());
         this->currentlyEditing->saveJSON(); //ToDo optimize the JSON saving process (only single button) + decouple saving content/title
         this->currentlyEditing->repaint();
         if(closeAtEnd){
