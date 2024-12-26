@@ -6,7 +6,6 @@
 #include <QClipboard>
 #include <QMessageBox>
 #include <QPainter>
-#include <QTextDocument>
 #include <QInputDialog>
 #include <QApplication>
 
@@ -562,12 +561,19 @@ void contentButton::setTitle(QString const &newTitle){
             }
         }else{
             this->title.clear();
+            this->titleDisplayed.clear();
             this->addOrEditTitleAction.setText(this->textForNewTitleAct);
             this->removeTitleAction.setVisible(false);
             if(removeTitleActionSeparator){
                 this->removeTitleActionSeparator->setVisible(false);
             }
         }
+        QTextOption optTitle(Qt::AlignHCenter);
+        this->titleDoc.setDefaultTextOption(optTitle);
+        this->titleDoc.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
+        this->titleDoc.setDefaultStyleSheet("body { color : black; }");
+        this->titleDoc.setHtml(this->titleDisplayed);
+        this->originalTitleWidth = this->titleDoc.size().width();
     }else{
         qDebug() << "Title has not changed.";
     }
@@ -599,6 +605,9 @@ void contentButton::setContent(QString const &newContent){
             contentWithHtml.replace("\n","<br>"); //replace regular linebreaks with html style linebreaks
             contentWithHtml.append("</body>");
             this->contentDisplayed = contentWithHtml;
+            this->contentDoc.setDefaultFont(QFont("Times", 12, QFont::Medium));
+            this->contentDoc.setDefaultStyleSheet("body { color : black; }");
+            this->contentDoc.setHtml(this->contentDisplayed);
         }else{
             timedPopUp(this, defaultPopUpTimer, "Too many characters", "The maximum amount of characters for content is 100,000.");
         }
@@ -688,32 +697,25 @@ void contentButton::paintEvent(QPaintEvent * const event){
     QPushButton::paintEvent(event);
     QPainter combinedImage(this);
 
-    QTextDocument docTitle;
-    QTextOption optTitle(Qt::AlignHCenter);
-    docTitle.setDefaultTextOption(optTitle);
-    docTitle.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
-    docTitle.setDefaultStyleSheet("body { color : black; }");
-    docTitle.setHtml(this->titleDisplayed);
-    docTitle.adjustSize();
-
-    if(docTitle.size().width() < this->width()){
-        docTitle.setTextWidth(this->width());
+    if(this->originalTitleWidth < this->width()){
+        this->titleDoc.setTextWidth(this->width());
+    }else{
+        this->titleDoc.setTextWidth(this->originalTitleWidth);
     }
 
-    //ToDo check int vs. double
-    int dividingHeight = this->title.length() > 0 ? docTitle.size().height() : 0;
+    int dividingHeight = this->title.length() > 0 ? this->titleDoc.size().height() : 0;
     int remainingHeight = this->height() - dividingHeight;
 
     QPoint pointTitle(0,0);
     QSize sizeTitle(this->width() - 1, dividingHeight);
     QRect rectTitle(pointTitle, sizeTitle);
 
-    QPixmap pixmapTitle(docTitle.size().width(), docTitle.size().height());
+    QPixmap pixmapTitle(this->titleDoc.size().width(), this->titleDoc.size().height());
     pixmapTitle.fill(Qt::transparent);
 
     QPainter paintTitle(&pixmapTitle);
-    paintTitle.setBrush(Qt::black); //superfluous?
-    docTitle.drawContents(&paintTitle, pixmapTitle.rect());
+    paintTitle.setBrush(Qt::black);
+    this->titleDoc.drawContents(&paintTitle, pixmapTitle.rect());
     QPixmap scaledPixmapTitle(pixmapTitle);
     /*
      * problem: when setting the scaledPixmap as icon (see below), any text
@@ -730,19 +732,12 @@ void contentButton::paintEvent(QPaintEvent * const event){
     //--------------START: CONTENT-------------------
 
     QPoint pointContent(0, dividingHeight);
-    QSize sizeContent(this->width() - 1, remainingHeight); //ToDo check the "-1" of width
 
-    QTextDocument docContent;
-    docContent.setDefaultFont(QFont("Times", 12, QFont::Medium));
-    docContent.setDefaultStyleSheet("body { color : black; }");
-    docContent.setHtml(this->contentDisplayed);
-    docTitle.adjustSize();
-
-    QPixmap pixmapContent(docContent.size().width(), docContent.size().height());
+    QPixmap pixmapContent(this->contentDoc.size().width(), this->contentDoc.size().height());
     pixmapContent.fill(Qt::transparent);
     QPainter paintContent(&pixmapContent);
-    paintContent.setBrush(Qt::black); //superfluous?
-    docContent.drawContents(&paintContent, pixmapContent.rect());
+    paintContent.setBrush(Qt::black);
+    this->contentDoc.drawContents(&paintContent, pixmapContent.rect());
 
     if(pixmapContent.rect().height() > remainingHeight){
         QPixmap scaledPixmapContent = pixmapContent.scaledToHeight(remainingHeight, Qt::SmoothTransformation);
@@ -751,7 +746,6 @@ void contentButton::paintEvent(QPaintEvent * const event){
         combinedImage.drawPixmap(pointContent, croppedPixmapContent);
     }else{
         QRect rectForUnscaledUncropped(0, dividingHeight, pixmapContent.rect().width(), pixmapContent.rect().height());
-
         combinedImage.drawPixmap(rectForUnscaledUncropped, pixmapContent);
     }
 }

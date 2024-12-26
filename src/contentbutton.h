@@ -6,6 +6,7 @@
 #include <QMainWindow>
 #include <QMenu>
 #include <QAction>
+#include <QTextDocument>
 
 #include "contentbtncount.h"
 #include "dynbutton.h"
@@ -136,6 +137,10 @@ private:
     QString content;
     QString titleDisplayed;
     QString contentDisplayed;
+    qreal originalTitleWidth;
+    QTextDocument titleDoc;
+    QTextDocument contentDoc;
+
     static int constexpr maxTitleLengthGeneral = 200; //at this point a pop up is shown (there is no reason to save this large of a title)
     static int constexpr maxTitleLengthForDisplaying = 50; //after this many letters, the title starts becoming unreadible
     static int constexpr maxContentLengthGeneral = 100000; //safety value (this already causes minor performance issues)
