@@ -34,7 +34,7 @@ void buttonEdit::editButton(contentButton *const btn){
         }else{
             this->ui->editTitle->setVisible(false);
         }
-        this->ui->editContent->setFocus(); //ToDo check again if really needed
+        this->ui->editContent->setFocus();
         this->ui->editContent->moveCursor(QTextCursor::End);
         this->show();
     }
@@ -52,7 +52,7 @@ void buttonEdit::save(bool const closeAtEnd){
         }
         this->currentlyEditing->setTitle(title);
         this->currentlyEditing->setContent(this->ui->editContent->toPlainText());
-        this->currentlyEditing->saveJSON(); //ToDo optimize the JSON saving process (only single button) + decouple saving content/title
+        this->currentlyEditing->saveJSON();
         this->currentlyEditing->repaint();
         if(closeAtEnd){
             this->close();

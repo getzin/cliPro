@@ -36,7 +36,7 @@ contentButton::~contentButton(){
             emit this->dynBtnSetMode(dynButton::btnModeADD);
         }
     }
-    this->unsetAsFocusedButton(); //called func already includes check on whether this button "is focused" or not
+    this->unsetAsFocusedButton(); //the called func already includes a check on whether this button "has focus" or not
     this->unsetAsLastUnfocusedButton();
 }
 
@@ -136,7 +136,7 @@ void contentButton::connectAllActions(){
 
 void contentButton::setStyleDefault(){
     this->setStyleSheet("contentButton { color: black; border: 1px solid silver; border-radius: 10%; "
-                            "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F0F0, stop:1 #eaeaea) }");
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F0F0, stop:1 #eaeaea) }");
 }
 
 void contentButton::setStyleFocused(){
@@ -148,14 +148,14 @@ void contentButton::setStyleFocused(){
 
 void contentButton::setStyleMarkedForDeletion(){
     this->setStyleSheet("contentButton { color: black; border: 1px solid lightcoral; border-radius: 10%;"
-                            "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffe8e3, stop:1 #fad4cd) }");
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffe8e3, stop:1 #fad4cd) }");
 }
 
 void contentButton::setStyleMarkedForDelAndFocus(){
     this->setStyleSheet("contentButton { color: black; border: 1px solid lightcoral; border-radius: 10%;"
-                            "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffe8e3, stop:1 #fad4cd) }"
-                            "contentButton:focus { color: black; border: 2px solid lightcoral; border-radius: 10%; outline: none;"
-                            "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffdabd, stop:1 #ffcabd) }");
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffe8e3, stop:1 #fad4cd) }"
+                        "contentButton:focus { color: black; border: 2px solid lightcoral; border-radius: 10%; outline: none;"
+                        "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #ffdabd, stop:1 #ffcabd) }");
 }
 
 bool contentButton::isMarkedForDeletion() const{
@@ -203,12 +203,13 @@ void contentButton::switchMarkedForDeletion(){
 }
 
 void contentButton::checkForDynBtnSwitch(){
-    /*   * case 1: button has been demarked and
+       /** case 1: button has been demarked and
          *           we now have 0 marked buttons
          *           --> switch state of dynFuncBtn to ADD
          * case 2: button is now marked (was not
          *           before) and our count now is 1
-         *           --> switch state of dynFuncBtn to RM */
+         *           --> switch state of dynFuncBtn to RM
+         */
     qsizetype markedForDelCount = contentButton::getMarkedForDelCnt();
     if(markedForDelCount == 0 && this->isNotMarkedForDeletion()){
         emit this->dynBtnSetMode(dynButton::btnModeADD);
@@ -299,7 +300,7 @@ void contentButton::keyPressEvent(QKeyEvent * const event){
     qDebug() << "start: keyPressEvent (contentButton)";
     int key = event->key();
     if(key == Qt::Key_Return || key == Qt::Key_Enter){
-        qDebug() << "Enter pressed.";
+        qDebug() << "Enter key pressed.";
         Qt::KeyboardModifiers mod = event->modifiers();
         if(mod == Qt::CTRL || mod == Qt::SHIFT){
             this->openOptionsMenu(this->mapToGlobal(this->rect().center()));
@@ -354,7 +355,7 @@ void contentButton::titleAdjust(){
 
     if(pressedOK){
         this->setTitle(userInput);
-        this->saveJSON(); //ToDo optimize
+        this->saveJSON();
     }
 }
 
@@ -391,7 +392,7 @@ void contentButton::pasteContentFromClipboard(){
     }else{
         if(this->getContent().length() > 0){
             timedPopUp(this, defaultPopUpTimer, "Invalid clipboard data", "Clipboard does not have valid text data."
-                                                                               "<br>Button content won't be overwritten.");
+                                                                          "<br>Button content won't be overwritten.");
         }else{
             timedPopUp(this, defaultQuickPopUpTimer, "Invalid clipboard data", "Clipboard does not have valid text data.");
         }
@@ -505,7 +506,7 @@ void contentButton::disableDeleteAllMarked(){
 //slot
 void contentButton::removeTitle(){
     this->setTitle("");
-    this->saveJSON(); //ToDo optimize
+    this->saveJSON();
 }
 
 //slot
@@ -526,7 +527,7 @@ qsizetype contentButton::getIndexInList() const{
 };
 
 void contentButton::saveJSON(){
-    emit this->saveButtonChangesIntoJSON(); //ToDo (optimization) saveJSONforSingleButton (or similar) + decouple saving title & saving content
+    emit this->saveButtonChangesIntoJSON();
 }
 
 QString contentButton::getTitle() const{
@@ -553,7 +554,7 @@ void contentButton::setTitle(QString const &newTitle){
 
                 this->addOrEditTitleAction.setText(this->textForEditTitleAct);
                 this->removeTitleAction.setVisible(true);
-                if(removeTitleActionSeparator){
+                if(this->removeTitleActionSeparator){
                     this->removeTitleActionSeparator->setVisible(true);
                 }
             }else{
@@ -564,7 +565,7 @@ void contentButton::setTitle(QString const &newTitle){
             this->titleDisplayed.clear();
             this->addOrEditTitleAction.setText(this->textForNewTitleAct);
             this->removeTitleAction.setVisible(false);
-            if(removeTitleActionSeparator){
+            if(this->removeTitleActionSeparator){
                 this->removeTitleActionSeparator->setVisible(false);
             }
         }
@@ -718,18 +719,18 @@ void contentButton::paintEvent(QPaintEvent * const event){
     this->titleDoc.drawContents(&paintTitle, pixmapTitle.rect());
     QPixmap scaledPixmapTitle(pixmapTitle);
     /*
-     * problem: when setting the scaledPixmap as icon (see below), any text
-     *          that resides in the center of the pixmap will be what is visible,
-     *          but we want to see as much of the "left text" as possible
-     * solution: crop the pixmap to size rect, effectively throwing away anything
+     * problem: when drawing the scaledPixmap as is, it will be
+     *          centered, but we want to see it starting from the left
+     * solution: crop the scaled pixmap to rectTitle, effectively throwing away anything
      *           that doesn't fit into the rect (== that was overhanging on the right)
      */
     QPixmap croppedPixmapTitle = scaledPixmapTitle.copy(pixmapTitle.rect());
     combinedImage.drawPixmap(rectTitle,croppedPixmapTitle);
 
-    //----------------END: TITLE---------------------
-    //---------------            --------------------
-    //--------------START: CONTENT-------------------
+    //----------------END OF TITLE PAINTING---------------------
+    //----------------------------------------------------------
+    //----------------------------------------------------------
+    //--------------START OF CONTENT PAINTING-------------------
 
     QPoint pointContent(0, dividingHeight);
 

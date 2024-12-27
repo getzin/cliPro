@@ -59,6 +59,7 @@ void profileMenu::initConnects(){
     connect(&(this->nameDialog), SIGNAL(profileNameEdited(QString,QString)), this, SLOT(handleProfileNameEdited(QString,QString)));
     connect(&(this->nameDialog), SIGNAL(createNewProfile(QString)), this, SLOT(handleNewProfileCreation(QString)));
 
+    //disable edit/del buttons when no profile is selected, enable when one is selected
     connect(this->ui->visibleProfileList, SIGNAL(itemSelectionChanged()), this, SLOT(handleSelectedProfileChanged()));
 }
 
@@ -70,8 +71,8 @@ void profileMenu::cleanUpZombieProfiles(){
     QString profilesFolderPath = QDir::currentPath() + profileMenu::profilesFolderName;
     QDir profilesFolder(profilesFolderPath);
     if(profilesFolder.exists()){
-        QStringList profileJsons = profilesFolder.entryList({"*.json"}, QDir::Files);
-        foreach(QString profile, profileJsons){
+        QStringList profileJsonsList = profilesFolder.entryList({"*.json"}, QDir::Files);
+        foreach(QString profile, profileJsonsList){
             profile.remove(".json"); //remove file ending before checking if it is in list
             if(this->internalProfilesList.contains(profile)){
                 qDebug() << "profile: " << profile << ".json is in list! (keep it / do nothing)";
@@ -238,72 +239,70 @@ void profileMenu::saveProfiles(){
 void profileMenu::deleteButtonPressed(){
     qDebug("Profiles: Delete Button pressed");
 
-    QMessageBox messageBox;
-    messageBox.setTextFormat(Qt::RichText);
-
-    QString confirmationText;
-    confirmationText.append("Do you really want to delete profile <b>");
-
-    QList<QListWidgetItem*> allSelectedItems = ui->visibleProfileList->selectedItems();
-
+    QList<QListWidgetItem*> allSelectedItems = this->ui->visibleProfileList->selectedItems();
     //note: We can only select one item in the list,
     //      either one item is selected or the list is empty
-    //      (we still signal the ERROR in the text box)
+    //      The delete button should never be 'pressable' unless one is selected
     if(allSelectedItems.empty()){
-        qDebug() << "No item selected.";
-        confirmationText.append("ERROR");
+        qDebug() << "No item selected. Do nothing. (Should never see this message)";
     }else{
-        QString textOfselectedItem = this->ui->visibleProfileList->selectedItems().at(0)->text();
-        qDebug() << "Item selected: " << textOfselectedItem;
+        QMessageBox messageBox;
+        messageBox.setTextFormat(Qt::RichText);
+
+        QString confirmationText;
+        confirmationText.append("Do you really want to delete profile <b>");
+
+        QString textOfselectedItem = allSelectedItems.at(0)->text();
+        qDebug() << "textOfselectedItem: " << textOfselectedItem;
         confirmationText.append(textOfselectedItem);
-    }
 
-    confirmationText.append("</b> with all its buttons? <br><br><i><b><u>WARNING:</u></b> This will be <b>irreversible</b> after pressing 'Save profiles'</i>");
+        confirmationText.append("</b> with all its buttons? <br><br><i><b><u>WARNING:</u></b> This will be <b>irreversible</b> after pressing 'Save profiles'</i>");
 
-    QMessageBox::StandardButton reply = messageBox.question(this, "Delete confirmation", confirmationText,
-                                QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
+        QMessageBox::StandardButton reply = messageBox.question(this, "Delete confirmation", confirmationText,
+                                                                QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
 
-    if(reply == QMessageBox::Yes){
-        int currRow = this->ui->visibleProfileList->currentRow();
+        if(reply == QMessageBox::Yes){
+            int currRow = this->ui->visibleProfileList->currentRow();
 
-        if(indexIsInBounds(currRow, this->ui->visibleProfileList->count())){
-            QListWidgetItem* itemToDelete = this->ui->visibleProfileList->takeItem(currRow);
-            QString delName = itemToDelete->text();
-            this->unsavedActions.append(profAction{delName, ""});
-            delete itemToDelete;
+            if(indexIsInBounds(currRow, this->ui->visibleProfileList->count())){
+                QListWidgetItem* itemToDelete = this->ui->visibleProfileList->takeItem(currRow);
+                QString delName = itemToDelete->text();
+                this->unsavedActions.append(profAction{delName, ""});
+                delete itemToDelete;
 
-            qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
+                qDebug() << "currentActiveProfHasBeenDeleted: " << currentActiveProfHasBeenDeleted;
 
-            if(currRow == this->currentActiveProfile){
-                this->currentActiveProfHasBeenDeleted = true;
-            }
-
-            if(this->currentActiveProfHasBeenDeleted){
-                this->ui->visibleProfileList->setCurrentRow(-1); //makes it so that no profile is selected
-            }else{
-                //Next block of code:
-                // restore "currently selected profile", but process whether
-                // deleted profile was before or after and set it accordingly
-                qsizetype lastSavedIDOffsetApplied = this->currentActiveProfile - this->savedIDOffset;
-
-                //if the deleted item appeared before the last saved ID, then reduce values by 1
-                if(currRow < lastSavedIDOffsetApplied){
-                    ++savedIDOffset;
-                    --lastSavedIDOffsetApplied;
+                if(currRow == this->currentActiveProfile){
+                    this->currentActiveProfHasBeenDeleted = true;
                 }
 
-                qDebug() << "index (lastSavedIDOffsetApplied): " << lastSavedIDOffsetApplied;
-                if(indexIsInBounds(lastSavedIDOffsetApplied, this->ui->visibleProfileList->count())){
-                    this->ui->visibleProfileList->setCurrentRow(lastSavedIDOffsetApplied);
-                }else{
+                if(this->currentActiveProfHasBeenDeleted){
                     this->ui->visibleProfileList->setCurrentRow(-1); //makes it so that no profile is selected
+                }else{
+                    //Next block of code:
+                        // restore "currently selected profile", but process whether
+                        // deleted profile was before or after and set it accordingly
+                    qsizetype lastSavedIDOffsetApplied = this->currentActiveProfile - this->savedIDOffset;
+
+                    //if the deleted item appeared before the last saved ID, then reduce values by 1
+                    if(currRow < lastSavedIDOffsetApplied){
+                        ++savedIDOffset;
+                        --lastSavedIDOffsetApplied;
+                    }
+
+                    qDebug() << "index (lastSavedIDOffsetApplied): " << lastSavedIDOffsetApplied;
+                    if(indexIsInBounds(lastSavedIDOffsetApplied, this->ui->visibleProfileList->count())){
+                        this->ui->visibleProfileList->setCurrentRow(lastSavedIDOffsetApplied);
+                    }else{
+                        this->ui->visibleProfileList->setCurrentRow(-1); //makes it so that no profile is selected
+                    }
                 }
+            }else{
+                qDebug() << "Current row lies out of bounds. (Or none is selected)";
             }
         }else{
-            ; //do nothing?
+            qDebug() << "NO selected.";
         }
-    }else{
-        ; //do nothing?
     }
 }
 
@@ -329,8 +328,8 @@ void profileMenu::handleRejectedSignal(){
 void profileMenu::createProfilesFolderIfNotExist(){
     QString profilesFolderPath = QDir::currentPath() + appSettings::appFolder + profileMenu::profilesFolderName;
     if(!(QDir(profilesFolderPath).exists())){
-        QDir().mkdir(profilesFolderPath);
         //ToDo what do if this fails?
+        QDir().mkdir(profilesFolderPath);
     }
 }
 
@@ -351,7 +350,7 @@ void profileMenu::renameProfilesJson(QString const &oldName, QString const &newN
         bool deleteSuccess = QFile::remove(newNamePath);
         qDebug() << "deleteSuccess: " << deleteSuccess;
     }
-    //ToDo what if fails?
+    //ToDo what do if this fails?
     bool renameSuccess = QFile::rename(oldNamePath, newNamePath);
     qDebug() << "renameSuccess: " << renameSuccess;
 }

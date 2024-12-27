@@ -65,7 +65,7 @@ signals:
     void keyWasPressed(int const key, qsizetype const indexOfSender);
     void startContentButtonEdit(qsizetype const indexOfSender);
     void deleteAllMarkedButtons();
-    void saveButtonChangesIntoJSON(); //ToDo for editing content and adding/editing/removing title
+    void saveButtonChangesIntoJSON();
     void moveButton(qsizetype const indexOfSender);
 
 protected:

@@ -46,9 +46,15 @@ void profileNameDialog::initConnects(){
     connect(this->ui->nameInputField, SIGNAL(textEdited(QString)), this, SLOT(adjustOKButton()));
 }
 
+void profileNameDialog::exitFailureListPtrNotSet(){
+    qDebug() << "ptrToVisibleProfileList has not been set (BAD, this really should never happen). Exit program.";
+    //ToDo error handling?
+    exit(EXIT_FAILURE);
+}
+
 void profileNameDialog::setPtrToVisibleProfileList(QListWidget const * const visibleProfileList){
     if(visibleProfileList){
-        this->PtrToVisibleProfileList = visibleProfileList;
+        this->ptrToVisibleProfileList = visibleProfileList;
     }
 }
 
@@ -67,7 +73,7 @@ void profileNameDialog::start(){
 
 //slot
 void profileNameDialog::startNewProfileCreation(){
-    if(this->PtrToVisibleProfileList){
+    if(this->ptrToVisibleProfileList){
         this->setWindowTitle("New profile");
         this->ui->labelText->setText("Enter name for new profile: ");
         this->ui->nameInputField->setText("");
@@ -77,19 +83,17 @@ void profileNameDialog::startNewProfileCreation(){
         this->currEditIndex = -1;
         this->start();
     }else{
-        qDebug() << "listWidgetPtr has not been set, or has no items (bad).";
-        //ToDo error handling?
+        profileNameDialog::exitFailureListPtrNotSet();
     }
 }
 
 //slot
 void profileNameDialog::startEditOfProfileName(){
     qDebug() << "start: startEditOfProfileName";
-    if(this->PtrToVisibleProfileList){
-        if(this->PtrToVisibleProfileList->count() > 0){
-            if(this->PtrToVisibleProfileList->selectedItems().count() == 1){
-                QString currentItemTxt = this->PtrToVisibleProfileList->selectedItems().at(0)->text();
-                qDebug() << "got string";
+    if(this->ptrToVisibleProfileList){
+        if(this->ptrToVisibleProfileList->count() > 0){
+            if(this->ptrToVisibleProfileList->selectedItems().count() == 1){
+                QString currentItemTxt = this->ptrToVisibleProfileList->selectedItems().at(0)->text();
                 if(!currentItemTxt.isEmpty()){
                     qDebug() << "currentItemTxt not empty (good)";
                     this->setWindowTitle("Edit profile");
@@ -98,10 +102,10 @@ void profileNameDialog::startEditOfProfileName(){
                     this->ui->buttonOK->setFocus();
                     this->currMode = dialogModeEdit;
                     this->currEditName = currentItemTxt;
-                    this->currEditIndex = this->PtrToVisibleProfileList->currentRow();
+                    this->currEditIndex = this->ptrToVisibleProfileList->currentRow();
                     this->start();
                 }else{
-                    qDebug() << "currentItemTxt empty (BAD, should never happen)";
+                    qDebug() << "currentItemTxt empty (bad, should never happen)";
                     //ToDo error handling?
                 }
             }else{
@@ -111,8 +115,7 @@ void profileNameDialog::startEditOfProfileName(){
             qDebug() << "The profiles list is empty. Not necessarily an error, but got nothing to do.";
         }
     }else{
-        qDebug() << "listWidgetPtr has not been set (BAD, should never happen).";
-        //ToDo error handling?
+        profileNameDialog::exitFailureListPtrNotSet();
     }
     qDebug() << "end: startEditOfProfileName";
 }
@@ -133,7 +136,6 @@ bool profileNameDialog::checkStringIsAlphanumeric(QString const &strToCheck) con
         //check each character individually
         //(sadly there doesn't appear to exist a library utility function for this)
         for(qsizetype i = 0; i < strSize && stringIsValid == true; ++i){
-            qDebug() << "i :" << i;
             if (!(strToCheck[i].isDigit() || strToCheck[i].isLetter() ||
                   strToCheck[i] == '_' || strToCheck[i] == '-')){
                 qDebug() << "Break! String is not valid";
@@ -150,15 +152,15 @@ bool profileNameDialog::checkStringIsAlphanumeric(QString const &strToCheck) con
 bool profileNameDialog::checkNameIsNotTaken(QString const &nameTocheck) const{
     qDebug() << "start: checkNameIsNotTaken";
     qDebug() << "current mode (0: edit, 1: new): " << this->currMode;
-    if(this->PtrToVisibleProfileList){
-        for(qsizetype i = 0; i < this->PtrToVisibleProfileList->count(); ++i){
-            if(nameTocheck == this->PtrToVisibleProfileList->item(i)->text()){
+    if(this->ptrToVisibleProfileList){
+        for(qsizetype i = 0; i < this->ptrToVisibleProfileList->count(); ++i){
+            if(nameTocheck == this->ptrToVisibleProfileList->item(i)->text()){
                 qDebug() << "Same text!";
                 qDebug() << "i: " << i;
-                qDebug() << "currentRow: " << this->PtrToVisibleProfileList->currentRow();
+                qDebug() << "currentRow: " << this->ptrToVisibleProfileList->currentRow();
                 //if we are editing an existing name, and it hasn't change
                 //  then that is not a duplicate & we will accept the input
-                if((this->currMode == dialogModeEdit) && (this->PtrToVisibleProfileList->currentRow() == i)){
+                if((this->currMode == dialogModeEdit) && (this->ptrToVisibleProfileList->currentRow() == i)){
                     qDebug() << "We are editing and the name has not changed --> This case is OK.";
                     return true;
                 }else{
@@ -168,9 +170,9 @@ bool profileNameDialog::checkNameIsNotTaken(QString const &nameTocheck) const{
             }
         }
     }else{
-        qDebug() << "listWidgetPtr has not been set (BAD, should never happen).";
+        profileNameDialog::exitFailureListPtrNotSet();
     }
-    qDebug() << "end: checkNameIsNotTaken (none found)";
+    qDebug() << "end: checkNameIsNotTaken (name is not taken)";
     return true;
 }
 

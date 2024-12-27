@@ -114,8 +114,8 @@ private:
     buttonEdit btnEdit; //editing button content+title (if there is one)
     moveButton moveBtnMenu; //changing button position
 
-    QString currSelectedProfileName; //ToDo rethink this variable / maybe move to profMenu and use getter/setter in all places
-    QString pathToFileForSelectedProfile; //ToDo rethink this variable / maybe move to profMenu and use getter/setter in all places
+    QString currSelectedProfileName;
+    QString pathToFileForSelectedProfile;
 
     QPushButton unmarkAllBtn;
 
@@ -123,7 +123,7 @@ private:
     bool searchActive = false;
     static const QClipboard *clipboard;
     static int constexpr stretchOfUnmarkAllBtn = 28; //this value has to be determined empirically
-        //(it's roughly equal to the stretch of the inputField+addBtn+searchBtn+a bit more for each spacing between the 3)
+        //(it's roughly equal to the stretch of the inputField+addBtn+searchBtn+a bit more for the spacings between the buttons)
 
     static qsizetype constexpr maxItemsPerRow = 4;
     static int constexpr minWindowSize_w = 550;

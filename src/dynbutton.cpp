@@ -4,13 +4,11 @@
 
 dynButton::~dynButton() {
     ; //nothing, we have no allocations/pointers to memory
-    qDebug() << "~dynButton --- dtor";
 }
 
 dynButton::dynButton(QWidget * const parent)
     : QPushButton(parent)
 {
-    qDebug() << "dynButton --- ctor";
     this->init();
 }
 

@@ -46,13 +46,14 @@ private:
     void start();
     bool checkStringIsAlphanumeric(QString const &strToCheck) const;
     bool checkNameIsNotTaken(QString const &nameTocheck) const;
+    static void exitFailureListPtrNotSet();
 
     Ui::profileNameDialog *ui;
     dialogMode currMode = dialogModeNew;
 
     qsizetype currEditIndex = -1;
     QString currEditName = "";
-    QListWidget const *PtrToVisibleProfileList = nullptr;
+    QListWidget const *ptrToVisibleProfileList = nullptr;
 
     static int constexpr windowSize_w = 240;
     static int constexpr WindowSize_h = 130;

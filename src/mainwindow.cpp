@@ -198,7 +198,6 @@ void MainWindow::fixTabOrder(){
     if(this->contentBtnList.count() > 0){
         QWidget::setTabOrder(&(this->unmarkAllBtn), this->contentBtnList.at(0));
         for(qsizetype i = 0; i < this->contentBtnList.count() - 1; ++i){
-            qDebug() << "i : " << i;
             QWidget::setTabOrder(this->contentBtnList.at(i), this->contentBtnList.at(i+1));
         }
         QWidget::setTabOrder(this->contentBtnList.last(), &(this->dynBtn));
@@ -403,7 +402,7 @@ void MainWindow::processAddANewButton(QString const &text){
 
     this->updateIndexOfAllButtons();
     this->fixTabOrder();
-    this->saveCurrentButtonsAsJson(); //ToDo optimize "saveJSONforSingleButton" (or similar)
+    this->saveCurrentButtonsAsJson();
 }
 
 //slot
@@ -443,7 +442,7 @@ void MainWindow::saveButtonsAsJson(QString const &pathToFile, QVector<contentBut
     QJsonArray jsonArr{};
 
     for(qsizetype i = 0; i < listOfBtns.count(); ++i){
-        qDebug() << "contentButtons to JSON for loop, i: " << i;
+        // qDebug() << "contentButtons to JSON for loop, i: " << i;
         QJsonObject jsonObjBtnTmp{};
         jsonObjBtnTmp.insert("id", i);
         jsonObjBtnTmp.insert("title", listOfBtns.at(i)->getTitle());
@@ -559,15 +558,14 @@ void MainWindow::processArrowKeyPress(int const key, qsizetype indexOfSender){
         ++sizeForCalc;
     }
 
-    qDebug() << "(before adj.) sizeForCalc: " << sizeForCalc;
-    qDebug() << "(before adj.) indexOfSender: " << indexOfSender;
     if(this->searchActive){
-        qDebug() << "search is active! adjust size!";
+        qDebug() << "(before adjustment) sizeForCalc: " << sizeForCalc;
+        qDebug() << "(before adjustment) indexOfSender: " << indexOfSender;
         sizeForCalc -= this->getHiddenButtonCount();
         indexOfSender = this->getAdjustedIndexOfSenderForActiveSearch(indexOfSender);
+        qDebug() << "(after adjustment) sizeForCalc: " << sizeForCalc;
+        qDebug() << "(after adjustment) indexOfSender: " << indexOfSender;
     }
-    qDebug() << "(after adj.) sizeForCalc: " << sizeForCalc;
-    qDebug() << "(after adj.) indexOfSender: " << indexOfSender;
 
     qsizetype newIndex = -1;
 
@@ -608,12 +606,11 @@ void MainWindow::processArrowKeyPress(int const key, qsizetype indexOfSender){
         }
     }
 
-    qDebug() << "(before adj.) newIndex: " << newIndex;
     if(this->searchActive){
-        qDebug() << "search is active! adjust index!";
+        qDebug() << "(before adjustment) newIndex: " << newIndex;
         newIndex = this->getAdjustedNewIndexForActiveSearch(newIndex);
+        qDebug() << "(after adjustment) newIndex: " << newIndex;
     }
-    qDebug() << "(after adj.) newIndex: " << newIndex;
 
     if(indexIsInBounds(newIndex, this->contentBtnList.count())){
         this->focusContentButton(this->contentBtnList.at(newIndex));
@@ -626,7 +623,7 @@ void MainWindow::processArrowKeyPress(int const key, qsizetype indexOfSender){
 
 //slot
 void MainWindow::processSingleButtonDeletion(qsizetype const indexOfSender){
-    qDebug() << "start: processDeleteKeyPress (index of sender: " << indexOfSender << ")";
+    qDebug() << "start: processSingleButtonDeletion (index of sender: " << indexOfSender << ")";
 
     QMessageBox::StandardButton reply;
 
@@ -665,7 +662,6 @@ void MainWindow::processSingleButtonDeletion(qsizetype const indexOfSender){
         }
     }else if(reply == QMessageBox::No){
         qDebug() << "No clicked";
-        ; //do nothing (?)
     }else{
         qDebug() << "Reset clicked";
         contentButton *cntBtnLstItem = this->contentBtnList.at(indexOfSender);
@@ -675,7 +671,7 @@ void MainWindow::processSingleButtonDeletion(qsizetype const indexOfSender){
             cntBtnLstItem->unsetAsFocusedButton();
         }
     }
-    qDebug() << "end: processDeleteKeyPress";
+    qDebug() << "end: processSingleButtonDeletion";
 }
 
 void MainWindow::processMinusKey(){
@@ -707,7 +703,7 @@ void MainWindow::processRemainingKeys(int const key){
         this->profMenu.show();
     }else if(key == Qt::Key_S){
         if(this->searchActive){
-            this->ui->buttonSearch->click(); //basically disables the search
+            this->ui->buttonSearch->click(); //effectively disables the search
         }else{
             this->ui->textInputField->setFocus();
         }
@@ -767,13 +763,13 @@ void MainWindow::processContentButtonKeyPress(int const key, qsizetype const ind
 }
 
 void MainWindow::keyPressEvent(QKeyEvent * const event){
-    qDebug() << "start: keyPressEvent! (MainWindow)";
+    qDebug() << "start: keyPressEvent (MainWindow)";
     int key = event->key();
     if(key == Qt::Key_P || this->profileSettingsValid == true){
         qDebug() << "got key! (" << QKeySequence(key).toString() << ")";
         if(key == Qt::Key_Left || key == Qt::Key_Right
             || key == Qt::Key_Up || key == Qt::Key_Down){
-            qDebug() << "Arrow Key!";
+            qDebug() << "Arrow key pressed on MainWindow.";
             this->doDefaultFocus();
         }else if(key == Qt::Key_Return || key == Qt::Key_Enter){
             qDebug() << "Enter pressed on MainWindow.";
@@ -790,7 +786,7 @@ void MainWindow::keyPressEvent(QKeyEvent * const event){
             this->processRemainingKeys(key);
         }
     }
-    qDebug() << "end: keyPressEvent! (MainWindow)";
+    qDebug() << "end: keyPressEvent (MainWindow)";
 }
 
 //slot
@@ -935,24 +931,15 @@ void MainWindow::updateIndexOfAllButtons(){
 }
 
 void MainWindow::removeSelectedButton(qsizetype const index){
-
-    qDebug() << "start: removeSelectedButton (index: " << index;
-
+    qDebug() << "start: removeSelectedButton (index: " << index << ")";
     contentButton *cntBtnLstItem = this->contentBtnList.at(index);
 
     if(cntBtnLstItem && cntBtnLstItem->isFocused()){
         qDebug() << "Item does exist and is selected right now";
 
         //delete from list
-        // this->contentBtnList.erase(this->contentBtnList.cbegin() + index);
         this->contentBtnList.remove(index);
         delete cntBtnLstItem;
-
-        //ToDo ***CHECK IF THIS CODE IS NEEDED***
-        // cntBtnLstItem = NULL; //invalidate pointer (for logic that follows)
-        //delete from grid
-        // QLayoutItem *takenItem = ui->scrollGrid->takeAt(i);
-        // delete takenItem;
     }
     this->updateIndexOfAllButtons();
     this->rebuildGrid();
@@ -960,32 +947,23 @@ void MainWindow::removeSelectedButton(qsizetype const index){
 
 void MainWindow::removeAllButtonsThatAreMarkedForDel(){
     qsizetype totalBtnCnt = this->contentBtnList.count();
-
     qsizetype i = 0;
     //i gets incremented in loop body if item(i) is NOT marked for deletion
     //totalBtnCnt gets decremented instead, if item(i) WAS marked for deletion
     while(i < totalBtnCnt){
+        // qDebug() << "i: " << i;
 
-        qDebug() << "i: " << i;
         contentButton *cntBtnLstItem = this->contentBtnList.at(i);
-
         //check if item exists + is marked
         //  1) if yes -> delete the item
-        //  2) if no  -> do nothing except i++
+        //  2) if no  -> do nothing except ++i
         if(cntBtnLstItem && cntBtnLstItem->isMarkedForDeletion()){
-            qDebug() << "Item does exist (i: " << i << "totalCnt: " << totalBtnCnt << ")";
+            qDebug() << "Item does exist (i: " << i << "totalBtnCnt: " << totalBtnCnt << ")";
             qDebug() << "Item is marked --> DELETE!";
 
             //delete from list
-            // this->contentBtnList.erase(this->contentBtnList.cbegin() + i);
             this->contentBtnList.remove(i);
             delete cntBtnLstItem;
-
-            //ToDo ***CHECK IF THIS CODE IS NEEDED***
-            // cntBtnLstItem = NULL; //invalidate pointer (for logic that follows)
-            //delete from grid
-            // QLayoutItem *takenItem = ui->scrollGrid->takeAt(i);
-            // delete takenItem;
 
             --totalBtnCnt;
         }else{
@@ -1059,7 +1037,6 @@ void MainWindow::processRemoveAllMarkedButtons(){
 
     }else if(reply == QMessageBox::No){
         qDebug() << "No clicked";
-        ; //do nothing (?)
     }else{
         qDebug() << "Reset clicked";
         this->unmarkAllContentButtons();
@@ -1127,7 +1104,7 @@ void MainWindow::updateButtonsForProfileChange(QString const &profileName, bool 
         this->clearContentButtonList();
         this->changeProfileName(profileName);
 
-        //ToDo what do when this part fails?
+        //ToDo what do if this fails?
         this->loadJsonOrCreateDefault();
         this->rebuildGrid();
         qDebug() << "(update buttons) count of contentBtnList: " << this->contentBtnList.count();
@@ -1194,7 +1171,7 @@ void MainWindow::moveButtonInList(qsizetype const oldIndex, qsizetype const newI
 
 void MainWindow::mousePressEvent(QMouseEvent *const event){
     Q_UNUSED(event);
-    qDebug() << "start: mousePressEvent";
+    qDebug() << "start: mousePressEvent (MainWindow)";
     contentButton::clearFocusedButton();
     contentButton::clearLastUnfocusedButton();
     if(this->contentBtnList.empty()){
@@ -1202,7 +1179,7 @@ void MainWindow::mousePressEvent(QMouseEvent *const event){
     }else{
         this->ui->centralwidget->setFocus();
     }
-    qDebug() << "end: mousePressEvent";
+    qDebug() << "end: mousePressEvent (MainWindow)";
 }
 
 void MainWindow::adjustMenuOfContentButtons(dynButton::btnMode const mode){
