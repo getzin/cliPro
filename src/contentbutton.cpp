@@ -64,8 +64,17 @@ void contentButton::initButtonSettings(){
     this->setStyleDefault();
     this->setFocusPolicy(Qt::StrongFocus); //tab+click focus
     this->setAttribute(Qt::WA_MacShowFocusRect);
+
     //-1 here as the number is already increased upon creation (see ctor of contentbtncount.h)
     this->setIndexInList(contentBtnCount::getTotalCnt() - 1);
+
+    //settings for title & content
+    QTextOption optTitle(Qt::AlignHCenter);
+    this->titleDoc.setDefaultTextOption(optTitle);
+    this->titleDoc.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
+    this->titleDoc.setDefaultStyleSheet("body { color : black; }");
+    this->contentDoc.setDefaultFont(QFont("Times", 12, QFont::Medium));
+    this->contentDoc.setDefaultStyleSheet("body { color : black; }");
 }
 
 void contentButton::setUpContextMenu(){
@@ -569,10 +578,6 @@ void contentButton::setTitle(QString const &newTitle){
                 this->removeTitleActionSeparator->setVisible(false);
             }
         }
-        QTextOption optTitle(Qt::AlignHCenter);
-        this->titleDoc.setDefaultTextOption(optTitle);
-        this->titleDoc.setDefaultFont(QFont("SansSerif", 20, QFont::Medium));
-        this->titleDoc.setDefaultStyleSheet("body { color : black; }");
         this->titleDoc.setHtml(this->titleDisplayed);
         this->originalTitleWidth = this->titleDoc.size().width();
     }else{
@@ -599,15 +604,13 @@ void contentButton::setContent(QString const &newContent){
             //for very long content (many characters or many lines), display "..." instead
             if(this->content.count('\n') > this->maxContentLinesForDisplaying
                 || this->content.length() > this->maxContentLengthForDisplaying){
-                contentWithHtml.append("...");
+                contentWithHtml.append(this->content.first(this->maxContentRemainingDisplayedChars).append("..."));
             }else{
                 contentWithHtml.append(this->content);
             }
             contentWithHtml.replace("\n","<br>"); //replace regular linebreaks with html style linebreaks
             contentWithHtml.append("</body>");
             this->contentDisplayed = contentWithHtml;
-            this->contentDoc.setDefaultFont(QFont("Times", 12, QFont::Medium));
-            this->contentDoc.setDefaultStyleSheet("body { color : black; }");
             this->contentDoc.setHtml(this->contentDisplayed);
         }else{
             timedPopUp(this, defaultPopUpTimer, "Too many characters", "The maximum amount of characters for content is 100,000.");

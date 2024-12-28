@@ -146,6 +146,7 @@ private:
     static int constexpr maxContentLengthGeneral = 100000; //safety value (this already causes minor performance issues)
     static int constexpr maxContentLengthForDisplaying = 1000; //there will be heavy performance issues past a certain size
     static int constexpr maxContentLinesForDisplaying = 20; //same as length
+    static int constexpr maxContentRemainingDisplayedChars = 10; //indicating the existence of more text without showing too much of it
     bool markedForDeletion = false;
     searchStatus buttonMatchesSearch = searchStatusDefault;
 
