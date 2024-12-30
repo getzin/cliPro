@@ -363,7 +363,7 @@ void contentButton::titleAdjust(){
     }
 
     if(pressedOK){
-        this->setTitle(userInput);
+        this->setTitle(userInput.replace("\n",""));
         this->saveJSON();
     }
 }
@@ -543,7 +543,7 @@ QString contentButton::getTitle() const{
     return this->title;
 }
 
-void contentButton::setTitle(QString const &newTitle){
+bool contentButton::setTitle(QString const &newTitle){
     if(this->title != newTitle){
         if(newTitle.length() > 0){
             if(newTitle.length() <= this->maxTitleLengthGeneral){
@@ -567,7 +567,12 @@ void contentButton::setTitle(QString const &newTitle){
                     this->removeTitleActionSeparator->setVisible(true);
                 }
             }else{
-                timedPopUp(this, defaultPopUpTimer, "Too many characters", "The maximum amount of characters for titles is 200.");
+                QString message = "The maximum amount of characters for titles is "
+                                  + QString::number(this->maxTitleLengthGeneral)
+                                  + "<br>Current invalid length: "
+                                  + QString::number(newTitle.length());
+                timedPopUp(this, defaultPopUpTimer, "Too many characters", message);
+                return false;
             }
         }else{
             this->title.clear();
@@ -583,6 +588,7 @@ void contentButton::setTitle(QString const &newTitle){
     }else{
         qDebug() << "Title has not changed.";
     }
+    return true;
 }
 
 bool contentButton::hasTitle() const{
@@ -593,7 +599,7 @@ QString contentButton::getContent() const{
     return this->content;
 }
 
-void contentButton::setContent(QString const &newContent){
+bool contentButton::setContent(QString const &newContent){
     if(newContent.length() > 0){
         if(newContent.length() <= this->maxContentLengthGeneral){
             this->content = newContent;
@@ -613,11 +619,17 @@ void contentButton::setContent(QString const &newContent){
             this->contentDisplayed = contentWithHtml;
             this->contentDoc.setHtml(this->contentDisplayed);
         }else{
-            timedPopUp(this, defaultPopUpTimer, "Too many characters", "The maximum amount of characters for content is 100,000.");
+            QString message = "The maximum amount of characters for content is "
+                              + QString::number(this->maxContentLengthGeneral)
+                              + "<br>Current invalid length: "
+                              + QString::number(newContent.length());
+            timedPopUp(this, defaultPopUpTimer, "Too many characters", message);
+            return false;
         }
     }else{
         this->removeContent();
     }
+    return true;
 }
 
 void contentButton::checkIfSearchIsMatched(QString const &searchString){

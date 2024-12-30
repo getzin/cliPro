@@ -50,12 +50,15 @@ void buttonEdit::save(bool const closeAtEnd){
         if(title.contains('\n')){
             title.remove('\n');
         }
-        this->currentlyEditing->setTitle(title);
-        this->currentlyEditing->setContent(this->ui->editContent->toPlainText());
-        this->currentlyEditing->saveJSON();
-        this->currentlyEditing->repaint();
-        if(closeAtEnd){
-            this->close();
+        bool titleOK = this->currentlyEditing->setTitle(title);
+        bool contentOK = this->currentlyEditing->setContent(this->ui->editContent->toPlainText());
+
+        if(titleOK && contentOK){
+            this->currentlyEditing->saveJSON();
+            this->currentlyEditing->repaint();
+            if(closeAtEnd){
+                this->close();
+            }
         }
     }
 }

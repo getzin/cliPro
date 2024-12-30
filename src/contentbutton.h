@@ -51,10 +51,10 @@ public:
 
     void saveJSON();
     QString getTitle() const;
-    void setTitle(QString const &newTitle);
+    bool setTitle(QString const &newTitle);
     bool hasTitle() const;
     QString getContent() const;
-    void setContent(QString const &newContent);
+    bool setContent(QString const &newContent);
     void checkIfSearchIsMatched(QString const &searchString);
     void resetSearchStatus();
     searchStatus getSearchStatus() const;
@@ -143,10 +143,11 @@ private:
 
     static int constexpr maxTitleLengthGeneral = 200; //at this point a pop up is shown (there is no reason to save this large of a title)
     static int constexpr maxTitleLengthForDisplaying = 50; //after this many letters, the title starts becoming unreadible
-    static int constexpr maxContentLengthGeneral = 100000; //safety value (this already causes minor performance issues)
+    static int constexpr maxContentLengthGeneral = 100000; //safety value (~100KB), allowing too many characters
     static int constexpr maxContentLengthForDisplaying = 1000; //there will be heavy performance issues past a certain size
     static int constexpr maxContentLinesForDisplaying = 20; //same as length
-    static int constexpr maxContentRemainingDisplayedChars = 10; //indicating the existence of more text without showing too much of it
+    static int constexpr maxContentRemainingDisplayedChars = 10; //content that's exceed the max length for displaying
+                                                                 //will be cut off with ... after this many characters
     bool markedForDeletion = false;
     searchStatus buttonMatchesSearch = searchStatusDefault;
 
