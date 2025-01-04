@@ -1,2 +1,10 @@
 *.pro.user
+.qmake.stash
+Makefile
+cliPro
 build/
+moc/
+obj/
+rcc/
+ui/
+cliProApp/
