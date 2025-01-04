@@ -68,7 +68,14 @@ void MainWindow::initMainWindow(){
 
     //these two are in the way of proper tab focus functionality
     this->ui->scrollArea->setFocusPolicy(Qt::NoFocus);
-    this->setFocusPolicy(Qt::NoFocus); //"this == mainWindow"
+    this->setFocusPolicy(Qt::NoFocus);
+
+    //should already be set via .ui file, but in case it isn't, we manually set it here
+    if(this->windowIcon().isNull()){
+        qDebug() << "windowIcon (logo) is NULL";
+        QString logoStr = ":/img/logo.png";
+        if(QFile::exists(logoStr)){ this->ui->buttonInfo->setIcon(QIcon(logoStr)); }
+    }
 }
 
 void MainWindow::initUIButtons(){
