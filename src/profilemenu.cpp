@@ -6,6 +6,7 @@
 #include <QInputDialog>
 #include <QDir>
 #include <QSettings>
+#include <QDebug>
 
 #include "apputils.h"
 
@@ -117,7 +118,7 @@ void profileMenu::saveVisibleListToInternal(){
     this->internalProfilesList.clear();
     for(qsizetype i = 0; i < this->ui->visibleProfileList->count(); ++i){
         qDebug() << "i: " << i << " ; value: " << this->ui->visibleProfileList->item(i)->text();
-        this->internalProfilesList.emplace_back(this->ui->visibleProfileList->item(i)->text());
+        this->internalProfilesList.append(this->ui->visibleProfileList->item(i)->text());
     }
 
     bool indexOK = false;

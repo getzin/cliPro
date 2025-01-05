@@ -3,6 +3,7 @@
 
 #include <QKeyEvent>
 #include <QDir>
+#include <QDebug>
 
 #include "apputils.h"
 
@@ -136,8 +137,8 @@ bool profileNameDialog::checkStringIsAlphanumeric(QString const &strToCheck) con
         //check each character individually
         //(sadly there doesn't appear to exist a library utility function for this)
         for(qsizetype i = 0; i < strSize && stringIsValid == true; ++i){
-            if (!(strToCheck[i].isDigit() || strToCheck[i].isLetter() ||
-                  strToCheck[i] == '_' || strToCheck[i] == '-')){
+            if (!(strToCheck.at(i).isDigit() || strToCheck.at(i).isLetter() ||
+                  strToCheck.at(i) == '_' || strToCheck.at(i) == '-')){
                 qDebug() << "Break! String is not valid";
                 stringIsValid = false;
                 break;

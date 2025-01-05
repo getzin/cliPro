@@ -13,6 +13,7 @@
 #include <QClipboard>
 #include <QMimeData>
 #include <QDir>
+#include <QScreen>
 
 #include "apputils.h"
 

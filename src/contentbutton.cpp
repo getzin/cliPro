@@ -555,7 +555,7 @@ bool contentButton::setTitle(QString const &newTitle){
                 if(this->title.length() < this->maxTitleLengthForDisplaying){
                     titleWithHtml.append(this->title);
                 }else{
-                    titleWithHtml.append(this->title.first(this->maxTitleLengthForDisplaying).append("..."));
+                    titleWithHtml.append(this->title.chopped(this->maxTitleLengthForDisplaying).append("..."));
                 }
                 titleWithHtml.replace("\n",""); //remove linebreaks
                 titleWithHtml.append("</body>");
@@ -610,7 +610,7 @@ bool contentButton::setContent(QString const &newContent){
             //for very long content (many characters or many lines), display "..." instead
             if(this->content.count('\n') > this->maxContentLinesForDisplaying
                 || this->content.length() > this->maxContentLengthForDisplaying){
-                contentWithHtml.append(this->content.first(this->maxContentRemainingDisplayedChars).append("..."));
+                contentWithHtml.append(this->content.chopped(this->maxContentRemainingDisplayedChars).append("..."));
             }else{
                 contentWithHtml.append(this->content);
             }
@@ -659,7 +659,7 @@ void contentButton::mouseLeftClick(){
 }
 
 void contentButton::mouseRightClick(QMouseEvent const * const event){
-    this->openOptionsMenu(event->globalPosition().toPoint());
+    this->openOptionsMenu(event->globalPos());
 }
 
 void contentButton::mousePressEvent(QMouseEvent * const event){

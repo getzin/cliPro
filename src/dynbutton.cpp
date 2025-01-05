@@ -1,6 +1,7 @@
 #include "dynbutton.h"
 
 #include <QKeyEvent>
+#include <QDebug>
 
 dynButton::~dynButton() {
     ; //nothing, we have no allocations/pointers to memory
