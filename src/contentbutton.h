@@ -40,6 +40,8 @@ public:
     void setIndexInList(qsizetype const index);
     qsizetype getIndexInList() const;
 
+    void setTitleActionStateToAdd();
+    void setTitleActionStateToEditRemove();
     void enableCopyCutRemoveContent();
     void disableCopyCutRemoveContent();
     void enablePasteContent();
@@ -135,8 +137,6 @@ private:
     qsizetype indexInList = -1;
     QString title;
     QString content;
-    QString titleDisplayed;
-    QString contentDisplayed;
     qreal originalTitleWidth;
     QTextDocument titleDoc;
     QTextDocument contentDoc;
@@ -156,7 +156,7 @@ private:
     static int constexpr minButtonSize_w = 70;
     static int constexpr minButtonSize_h = 70;
 
-    static QString const textForNewTitleAct;
+    static QString const textForAddTitleAct;
     static QString const textForEditTitleAct;
     static QString const textForRemoveTitleAct;
     static QString const textForCopyContentAct;
