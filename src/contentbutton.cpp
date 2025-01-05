@@ -16,7 +16,7 @@ qsizetype contentBtnCount::markedForDeletionCount = 0;
 contentButton* contentButton::focusedButton = nullptr;
 contentButton* contentButton::lastUnfocusedButton = nullptr;
 
-QString const contentButton::textForNewTitleAct = "Add title";
+QString const contentButton::textForAddTitleAct = "Add title";
 QString const contentButton::textForEditTitleAct = "Edit title";
 QString const contentButton::textForRemoveTitleAct = "Remove title";
 QString const contentButton::textForCopyContentAct = "Copy content";
@@ -42,7 +42,7 @@ contentButton::~contentButton(){
 
 contentButton::contentButton(QWidget *const parent)
     : QPushButton(parent),
-      addOrEditTitleAction(this->textForNewTitleAct, this),
+      addOrEditTitleAction(this->textForAddTitleAct, this),
       removeTitleAction(this->textForRemoveTitleAct, this),
       copyContentAction(this->textForCopyContentAct, this),
       pasteContentAction(this->textForPasteContentAct, this),
@@ -379,7 +379,7 @@ void contentButton::copyContentToClipboard(){
 
 //slot
 void contentButton::pasteContentFromClipboard(){
-    bool save = true;
+    bool overrideConfirmation = true;
     QString clipboardText = QGuiApplication::clipboard()->text();
     if(clipboardText.length() > 0){
         if(this->getContent().length() > 0){
@@ -390,10 +390,10 @@ void contentButton::pasteContentFromClipboard(){
                                           "<br><br><i><b><u>WARNING:</u></b> This action is <b>irreversible!</b></i>",
                                           QMessageBox::No|QMessageBox::Yes, QMessageBox::No);
             if(reply == QMessageBox::No){
-                save = false;
+                overrideConfirmation = false;
             }
         }
-        if(save){
+        if(overrideConfirmation){
             this->setContent(QGuiApplication::clipboard()->text());
             this->saveJSON();
             this->repaint();
@@ -409,9 +409,8 @@ void contentButton::pasteContentFromClipboard(){
 }
 
 void contentButton::clearContent(){
-    this->content.clear();
-    this->contentDisplayed.clear();
-    this->disableCopyCutRemoveContent();
+    this->setContent("");
+    this->saveJSON();
 }
 
 //slot
@@ -437,6 +436,22 @@ void contentButton::removeContent(){
         }
     }else{
         qDebug() << "button content is already empty, got nothing to delete.";
+    }
+}
+
+void contentButton::setTitleActionStateToAdd(){
+    this->addOrEditTitleAction.setText(this->textForAddTitleAct);
+    this->removeTitleAction.setVisible(false);
+    if(this->removeTitleActionSeparator){
+        this->removeTitleActionSeparator->setVisible(false);
+    }
+}
+
+void contentButton::setTitleActionStateToEditRemove(){
+    this->addOrEditTitleAction.setText(this->textForEditTitleAct);
+    this->removeTitleAction.setVisible(true);
+    if(this->removeTitleActionSeparator){
+        this->removeTitleActionSeparator->setVisible(true);
     }
 }
 
@@ -545,11 +560,10 @@ QString contentButton::getTitle() const{
 
 bool contentButton::setTitle(QString const &newTitle){
     if(this->title != newTitle){
+        QString titleWithHtml;
         if(newTitle.length() > 0){
             if(newTitle.length() <= this->maxTitleLengthGeneral){
                 this->title = newTitle;
-
-                QString titleWithHtml;
                 titleWithHtml.append("<body>");
                 //we clip very long titles
                 if(this->title.length() < this->maxTitleLengthForDisplaying){
@@ -559,13 +573,7 @@ bool contentButton::setTitle(QString const &newTitle){
                 }
                 titleWithHtml.replace("\n",""); //remove linebreaks
                 titleWithHtml.append("</body>");
-                this->titleDisplayed = titleWithHtml;
-
-                this->addOrEditTitleAction.setText(this->textForEditTitleAct);
-                this->removeTitleAction.setVisible(true);
-                if(this->removeTitleActionSeparator){
-                    this->removeTitleActionSeparator->setVisible(true);
-                }
+                this->setTitleActionStateToEditRemove();
             }else{
                 QString message = "The maximum amount of characters for titles is "
                                   + QString::number(this->maxTitleLengthGeneral)
@@ -576,14 +584,9 @@ bool contentButton::setTitle(QString const &newTitle){
             }
         }else{
             this->title.clear();
-            this->titleDisplayed.clear();
-            this->addOrEditTitleAction.setText(this->textForNewTitleAct);
-            this->removeTitleAction.setVisible(false);
-            if(this->removeTitleActionSeparator){
-                this->removeTitleActionSeparator->setVisible(false);
-            }
+            this->setTitleActionStateToAdd();
         }
-        this->titleDoc.setHtml(this->titleDisplayed);
+        this->titleDoc.setHtml(titleWithHtml);
         this->originalTitleWidth = this->titleDoc.size().width();
     }else{
         qDebug() << "Title has not changed.";
@@ -600,12 +603,10 @@ QString contentButton::getContent() const{
 }
 
 bool contentButton::setContent(QString const &newContent){
+    QString contentWithHtml;
     if(newContent.length() > 0){
         if(newContent.length() <= this->maxContentLengthGeneral){
             this->content = newContent;
-            this->enableCopyCutRemoveContent();
-
-            QString contentWithHtml;
             contentWithHtml.append("<body>");
             //for very long content (many characters or many lines), display "..." instead
             if(this->content.count('\n') > this->maxContentLinesForDisplaying
@@ -616,8 +617,7 @@ bool contentButton::setContent(QString const &newContent){
             }
             contentWithHtml.replace("\n","<br>"); //replace regular linebreaks with html style linebreaks
             contentWithHtml.append("</body>");
-            this->contentDisplayed = contentWithHtml;
-            this->contentDoc.setHtml(this->contentDisplayed);
+            this->enableCopyCutRemoveContent();
         }else{
             QString message = "The maximum amount of characters for content is "
                               + QString::number(this->maxContentLengthGeneral)
@@ -627,8 +627,10 @@ bool contentButton::setContent(QString const &newContent){
             return false;
         }
     }else{
-        this->removeContent();
+        this->content.clear();
+        this->disableCopyCutRemoveContent();
     }
+    this->contentDoc.setHtml(contentWithHtml);
     return true;
 }
 

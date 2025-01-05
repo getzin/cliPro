@@ -1175,6 +1175,7 @@ void MainWindow::moveButtonInList(qsizetype const oldIndex, qsizetype const newI
     }
     this->updateIndexOfAllButtons();
     this->rebuildGrid();
+    this->saveCurrentButtonsAsJson();
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *const event){
